@@ -8486,8 +8486,10 @@ function makeViewer(stageEl, chipEl, degEl, sliderEl, paintNameEl, hooks){
       la.style.opacity = '1';
       lb.style.opacity = ease.toFixed(3);
       var push = 1.006 + 0.01 * Math.sin(bt * Math.PI);  // gentle push-in mid-blend, kept small so photos keep their edges in frame
-      la.style.transform = (flips[i0] ? 'scaleX(-1) ' : '') + 'scale(' + push.toFixed(4) + ')';
-      lb.style.transform = (flips[i1] ? 'scaleX(-1) ' : '') + 'scale(' + (push + 0.006).toFixed(4) + ')';
+      var scaleA = fitA === 'contain' ? 1 : push;
+      var scaleB = fitB === 'contain' ? 1 : (push + 0.006);
+      la.style.transform = (flips[i0] ? 'scaleX(-1) ' : '') + 'scale(' + scaleA.toFixed(4) + ')';
+      lb.style.transform = (flips[i1] ? 'scaleX(-1) ' : '') + 'scale(' + scaleB.toFixed(4) + ')';
       if (chipEl) chipEl.textContent = angles[bt < 0.5 ? i0 : i1] || Math.round(deg) + '°';
       domIdx = bt < 0.5 ? i0 : i1;
       tintKeys = [keyFor(i0), keyFor(i1)];
