@@ -109,6 +109,25 @@
   .support-link:hover{color:var(--gold);border-color:var(--gold);background:rgba(200,164,104,.08)}
   .support-link svg{width:13px;height:13px;flex:none}
   .support-link:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .support-wrap{position:relative}
+  .support-panel{
+    position:absolute;top:calc(100% + 10px);right:0;z-index:600;width:236px;
+    background:#121216;border:1px solid var(--line);border-radius:14px;padding:14px;
+    box-shadow:0 24px 60px rgba(0,0,0,.55);display:grid;gap:11px;justify-items:center;
+  }
+  .support-panel[hidden]{display:none}
+  .support-chips{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+  .support-chip{
+    text-decoration:none;background:var(--bg2);color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:7px 14px;
+    font:600 13px 'Archivo',sans-serif;transition:border-color .15s,color .15s,background .15s;
+  }
+  .support-chip:hover{color:var(--text);border-color:var(--faint)}
+  .support-chip[aria-pressed="true"]{color:var(--gold);border-color:var(--gold);background:rgba(217,164,65,.09)}
+  .support-chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .support-qr{width:168px;height:168px;border-radius:10px;background:#fff;display:block}
+  .support-qr[hidden]{display:none}
+  .support-qr-note{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.05em;text-align:center;line-height:1.5}
 
   /* ---------- the floor (freeform canvas) ---------- */
   .floor-head{
@@ -190,6 +209,37 @@
   }
   .grip-details:hover{color:var(--text);border-color:var(--faint)}
   .grip-details:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .grip-fullscreen{
+    appearance:none;cursor:pointer;background:transparent;border:1px solid var(--line);
+    color:var(--muted);border-radius:999px;width:30px;height:30px;padding:0;margin-left:8px;
+    display:inline-flex;align-items:center;justify-content:center;flex:none;
+  }
+  .grip-fullscreen svg{width:13px;height:13px;flex:none}
+  .grip-fullscreen:hover{color:var(--text);border-color:var(--faint)}
+  .grip-fullscreen:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  /* grip order, left to right after the drag dots: Replace pill,
+     fullscreen icon, round \u2715 \u2014 held by flex order so it is
+     the same whatever order the buttons were appended in */
+  .grip .grip-replace{order:1}
+  .grip .grip-fullscreen{order:2}
+  .grip .grip-remove{order:3}
+  /* on the regular floor Remove is just a round \u2715 in the corner,
+     the same treatment theater already uses */
+  #floor .spot .grip-remove{
+    width:30px;height:30px;padding:0;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:0;line-height:1;letter-spacing:0;
+  }
+  #floor .spot .grip-remove::before{content:"\2715";font-size:14px}
+  /* in-page full-photo overlay: the card's current photo edge to
+     edge on black, no card chrome at all (the native fullscreen
+     API is blocked inside the app frame, so this stands in) */
+  .card-fs-overlay{
+    position:fixed;inset:0;z-index:5000;background:#000;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .card-fs-overlay[hidden]{display:none}
+  .card-fs-overlay img{width:100%;height:100%;object-fit:contain;display:block}
   /* ---------- editing: remove + replace on every floor ----------
      There is no separate Edit mode. Every card's ✕ Remove pill and
      Replace pill sit in its gold handle on the regular floor as
@@ -820,10 +870,15 @@
     padding:30px 14px 11px;
     background:linear-gradient(180deg,rgba(5,5,7,0),rgba(5,5,7,.85) 58%);
     opacity:0;pointer-events:none;transform:translateY(5px);
-    transition:opacity .22s ease,transform .22s ease;
+    /* fade in smoothly on hover, vanish instantly on mouse-out:
+       the base (resting) transition is 0s, so the moment hover or
+       focus ends the strip is gone with no lingering fade \u2014 in
+       detail mode and image mode alike, since both reveal this
+       same strip */
+    transition:opacity 0s ease,transform 0s ease;
   }
   .spot:hover .stage .colorway-row,
-  .spot:focus-within .stage .colorway-row{opacity:1;pointer-events:auto;transform:none}
+  .spot:focus-within .stage .colorway-row{opacity:1;pointer-events:auto;transform:none;transition:opacity .22s ease,transform .22s ease}
   /* touch has no hover to reveal the strip with, so on a
      coarse pointer the colors simply stay on the photo —
      the dots must remain tappable there */
@@ -1095,7 +1150,7 @@
 
   /* ---------- budget bar ---------- */
   .budget-bar{
-    display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;
+    display:block;
     margin:16px 0 2px;padding:14px 18px;
     background:linear-gradient(180deg,rgba(217,164,65,.10),rgba(217,164,65,.04));
     border:1px solid rgba(217,164,65,.4);border-radius:var(--radius);
@@ -1103,6 +1158,22 @@
   .budget-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold)}
   .budget-amount{font-size:clamp(26px,4.5vw,38px);font-weight:900;letter-spacing:-.01em;line-height:1}
   .budget-note{font-size:12.5px;color:var(--muted);line-height:1.45;flex:1 1 240px}
+  .budget-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px}
+  .budget-top .afford-toggle{margin-left:auto;align-self:center}
+  /* the affordability detail now lives inside the value bar as one
+     box: a sub-head row (its label + the tier seg) above the grid,
+     shown only while the panel is expanded \u2014 collapsed, nothing
+     of it shows at all */
+  .budget-bar .afford-panel{margin-top:2px}
+  .afford-subhead{
+    display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;
+    margin-top:14px;padding-top:14px;border-top:1px solid rgba(217,164,65,.25);
+  }
+  .afford-subhead .seg{margin-left:auto;background:var(--bg2);flex-wrap:wrap}
+  .afford-subhead .seg button{padding:8px 13px;font-size:12.5px}
+  @media (max-width:620px){
+    .afford-subhead .seg{margin-left:0}
+  }
   .car-price{
     font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--gold);
     letter-spacing:.05em;margin-top:7px;
@@ -1134,7 +1205,7 @@
   .afford-toggle:hover{color:var(--text);border-color:var(--gold)}
   .afford-toggle:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .afford-toggle .afford-chev{font-size:10px;line-height:1;transition:transform .25s var(--ease)}
-  .afford-bar.is-collapsed .afford-toggle .afford-chev{transform:rotate(-90deg)}
+  .budget-bar.is-collapsed .afford-toggle .afford-chev{transform:rotate(-90deg)}
   .afford-panel[hidden]{display:none}
   .afford-grid{
     display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;
@@ -1221,23 +1292,23 @@
   .gcard.image-only .drag-hint,
   .gcard.image-only .details-btn,
   .fsheet.image-only .details-btn{
-    opacity:0;pointer-events:none;transition:opacity .25s ease;
+    opacity:0;pointer-events:none;transition:opacity 0s ease;
   }
   .spot.image-only .stage .shade,
-  .gcard.image-only .stage .shade{opacity:0;transition:opacity .25s ease}
-  .fsheet.image-only .f-photo::after{opacity:0;transition:opacity .25s ease}
+  .gcard.image-only .stage .shade{opacity:0;transition:opacity 0s ease}
+  .fsheet.image-only .f-photo::after{opacity:0;transition:opacity 0s ease}
   /* Keyboard focus reveals the chrome too — but only :focus-visible
      (Tab navigation), never a plain mouse click: clicking "Image
      only" must not leave the chrome stuck on via the focus the click
      leaves behind. */
   :is(.spot,.gcard,.fsheet).image-only:hover :is(.grip,.badge,.cfg-link,.angle-chip,.drag-hint,.details-btn,.resize-handle),
   :is(.spot,.gcard,.fsheet).image-only:has(:focus-visible) :is(.grip,.badge,.cfg-link,.angle-chip,.drag-hint,.details-btn,.resize-handle){
-    opacity:1;pointer-events:auto;
+    opacity:1;pointer-events:auto;transition:opacity .25s ease;
   }
   :is(.spot,.gcard).image-only:hover .stage .shade,
-  :is(.spot,.gcard).image-only:has(:focus-visible) .stage .shade{opacity:1}
+  :is(.spot,.gcard).image-only:has(:focus-visible) .stage .shade{opacity:1;transition:opacity .25s ease}
   .fsheet.image-only:hover .f-photo::after,
-  .fsheet.image-only:has(:focus-visible) .f-photo::after{opacity:1}
+  .fsheet.image-only:has(:focus-visible) .f-photo::after{opacity:1;transition:opacity .25s ease}
 
   /* ---------- theater: the photos carry almost nothing ----------
      In theater mode a picture stays clean — clicking it, dragging
@@ -1279,7 +1350,7 @@
     background:transparent;border-bottom-color:transparent;
     box-shadow:none;backdrop-filter:none;height:46px;
   }
-  body.theater #floor .spot .grip *:not(.grip-remove):not(.grip-replace):not(.grip-details){opacity:0 !important}
+  body.theater #floor .spot .grip *:not(.grip-remove):not(.grip-replace):not(.grip-details):not(.grip-fullscreen){opacity:0 !important}
   /* merged editing in theater: each photo's ✕ remove control sits
      in its top-right corner, with the Replace button alongside it,
      both fully hidden until that photo is hovered or holds
@@ -1303,7 +1374,7 @@
      visibility rule — hidden until that photo is hovered or holds
      keyboard focus, then shown together with the ✕ */
   body.theater #floor .spot .grip-replace{
-    position:absolute;top:7px;right:48px;z-index:30;margin:0;flex:none;
+    position:absolute;top:7px;right:88px;z-index:30;margin:0;flex:none;
     height:32px;padding:0 13px;border-radius:999px;
     display:flex;align-items:center;justify-content:center;
     background:rgba(8,8,10,.78);border:1px solid rgba(217,164,65,.55);
@@ -1314,6 +1385,23 @@
   body.theater #floor .spot:hover .grip-replace,
   body.theater #floor .spot:focus-within .grip-replace{opacity:1;pointer-events:auto}
   body.theater #floor .spot .grip-replace:hover{background:var(--gold);color:#141005;border-color:var(--gold)}
+  /* the fullscreen icon: a round button between Replace and the
+     \u2715 in the same top-right corner, under the exact same
+     visibility rule \u2014 hidden until that photo is hovered or
+     holds keyboard focus */
+  body.theater #floor .spot .grip-fullscreen{
+    position:absolute;top:7px;right:48px;z-index:30;margin:0;flex:none;
+    width:32px;height:32px;padding:0;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(8,8,10,.78);border:1px solid rgba(217,164,65,.55);
+    color:var(--text);
+    opacity:0;pointer-events:none;
+    transition:opacity .2s ease,background .2s ease,color .2s ease,border-color .2s ease;
+  }
+  body.theater #floor .spot .grip-fullscreen svg{width:14px;height:14px}
+  body.theater #floor .spot:hover .grip-fullscreen,
+  body.theater #floor .spot:focus-within .grip-fullscreen{opacity:1;pointer-events:auto}
+  body.theater #floor .spot .grip-fullscreen:hover{background:var(--gold);color:#141005;border-color:var(--gold)}
   /* the Details button: a labelled pill immediately left of
      Replace in the same top-right corner, under the exact same
      visibility rule — hidden until that photo is hovered or holds
@@ -1323,7 +1411,7 @@
      Configure, Under the hood); while the card is showing it
      reads Hide details and switches back to the photo alone. */
   body.theater #floor .spot .grip-details{
-    position:absolute;top:7px;right:136px;z-index:30;margin:0;flex:none;
+    position:absolute;top:7px;right:176px;z-index:30;margin:0;flex:none;
     height:32px;padding:0 13px;border-radius:999px;
     display:flex;align-items:center;justify-content:center;
     background:rgba(8,8,10,.78);border:1px solid rgba(217,164,65,.55);
@@ -1345,7 +1433,7 @@
   body.theater #floor .spot:not(.image-only) .grip{
     background:rgba(217,164,65,.08);border-bottom-color:var(--line-soft);height:auto;
   }
-  body.theater #floor .spot:not(.image-only) .grip *:not(.grip-remove):not(.grip-replace):not(.grip-details){
+  body.theater #floor .spot:not(.image-only) .grip *:not(.grip-remove):not(.grip-replace):not(.grip-details):not(.grip-fullscreen){
     opacity:1 !important;
   }
   body.theater #floor .spot .resize-handle{width:46px;height:46px}
@@ -1941,7 +2029,7 @@
 
   <header>
     <h1>The Trophy <span class="thin">Room</span></h1>
-    <p class="lede" id="lede">A private collection of the rarest cars in the world. Arrange the floor by hand, turn each car, and choose its factory colour from real cars; the room keeps the running total as you go.</p>
+    <p class="lede" id="lede">A private collection of the rarest cars in the world. Arrange the floor by hand, turn each car, and choose its factory colour from real cars.</p>
   </header>
 
   <div class="toolbar">
@@ -1952,32 +2040,30 @@
       <button id="btnStages" aria-pressed="false">Stages</button>
     </div>
     <div class="auth-control" id="authControl">
-      <span class="auth-status" id="authStatus" aria-live="polite">Not signed in</span>
+      <span class="auth-status" id="authStatus" aria-live="polite"></span>
       <button type="button" class="ghost-btn" id="btnAuthSignIn">Sign in with Google</button>
       <button type="button" class="ghost-btn" id="btnAuthSignOut" hidden>Sign out</button>
     </div>
-    <a class="ghost-btn support-link" href="https://www.paypal.me/AjashX" target="_blank" rel="noopener noreferrer" title="Leave a tip via PayPal" aria-label="Support the Trophy Room — leave a tip via PayPal (opens in a new tab)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>Support</a>
-    <span class="hint">DRAG &#183; TURN &#183; ARRANGE</span>
+    <span class="support-wrap" id="supportWrap"><button type="button" class="ghost-btn support-link" id="btnSupport" aria-haspopup="true" aria-expanded="false" aria-controls="supportPanel" title="Support the Trophy Room via PayPal"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>Support</button><span class="support-panel" id="supportPanel" hidden><span class="support-chips" role="group" aria-label="Choose a support amount"><a class="support-chip" data-amount="10" href="https://www.paypal.me/AjashX/10" target="_blank" rel="noopener noreferrer" aria-pressed="false">$10</a><a class="support-chip" data-amount="25" href="https://www.paypal.me/AjashX/25" target="_blank" rel="noopener noreferrer" aria-pressed="true">$25</a><a class="support-chip" data-amount="50" href="https://www.paypal.me/AjashX/50" target="_blank" rel="noopener noreferrer" aria-pressed="false">$50</a></span><img class="support-qr" data-qr="10" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAAEIAQAAAACLjVdSAAABjElEQVR4nO2Yu47EQAgEq0/+/1/uDYDx7CUbHUY368gaddBCPApkPnw/nwRfxT9W4EoQYxw/+6unOO1RXEQAEAhZgMX2OsVpXzxQJkXFwcjrdYrTdoXBMkLoSR9TFBJCrjx5zMejiguyVWTD0Kocd/qYorigqkOW5UiR+3WM0x6FNh6L2WIQ2+sUp338UbCxgmCMnSAyxWmjQhmTiIKjn9bwHeW0R2FZgsSxKhefyh/K/NCNYbKMfCifAqpOWlsMyrYyxWlbPBLT5W3abFQ2xWmfIgjMEg5KTVL1gf0j+VRZJqodhpUsU5y28ZiiNrKDcgNZBGSK006F4hhUyCEsyCE8y+lfK2q+VMVEKBa6y2OcdvKYFfwBWAliUpTNKKc9CoEWoxvsPAkdWS+xueS+D9FH7y13itO2eCR3xc4i1i7T6mOK4vd9fXHpOitPcdo4X97u60EkkSLn8emukB3gEclhH9hPN4WRslZy/OrQfX/baoPBCsx8ZDy2+zpU81g73hSnbfvcCB9fxUzFC7aCswpwG69NAAAAAElFTkSuQmCC" alt="QR code to send $10 via PayPal" width="168" height="168" hidden><img class="support-qr" data-qr="25" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAAEIAQAAAACLjVdSAAABjklEQVR4nO2ZS3LDMAxDHzK5/5XRBUjZXWVVmVPF+dkKFzBGJEBa5sPx+hTwjfjHEW9QzowMyPXp1SlIt/GBAYRAYJCFe3UM0n18FA1GYcOhKKtjkO6PUChREuc5HEMiZCQA1e9DOB6NeEMVEAyWlcRZq2OQ7uOjNkNliYWstToG6Z6Ie6lY6mJxLU9Bui1C9SqNtZYCo1lId0VYpiyYVvZg4eP8xwtqh0RaLOh0sc7cHzJLY+JBJMWdeRbSv4/AbUdx0eJ1abCnIN1XT01okUtVVHb9UL8uQHEdbk7yfWb9iMxGYbwafdc/o5D+eUSlxkVDKS1l3k+bf0RforA2VmQlxVRH1g8570hLmzIL+8j6YdX9x5U5piwpdGL9yO0DTUUXE2/EMSXivfwX3db2xqgebwrSbXxcAnsfFa6NMwXpNj6u7j6FdU2WObC/vc3XtaaFYaWeyExBupGPHL6dxKWd6T/6uA/XpdBxXL6kf6lWP3OyeuzgI/OF7vHbsF+NHCfOP349insQxzdiZsQPuMS6/01a0P0AAAAASUVORK5CYII=" alt="QR code to send $25 via PayPal" width="168" height="168"><img class="support-qr" data-qr="50" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAAEIAQAAAACLjVdSAAABl0lEQVR4nO2ZsXLDMAxDH3L+/19GB1Cyrkum0rwmzsJIGGAeRQKyzJvn9Q7wRfxjBF4FYoxtV7S3pzDtQVyQdxcIYWEZ36tTmDYiJFGVIsBCe3UW0z9HXHcoAEMqpJnHQIQxVupED/J4FHEBHNVgmaoOd/KYgvg1X47f2p7CtAdxdIpqpT7X2nhMQeA9XBOlMuy18WH18aqWgUHGdkJQZMgkpg2IC2QlAzksNW0tkqUpTDv1hzJWXBokuSGtZArTZj1Wh2brsQQfVx8qm5KpohKoOTcJpjDtRBgJ1cBdSkz9PJ5HVH0sM+vVXL1rZgrTxnzI28xlEe5JM4VpH0JeZr+Mvu07SZOYtiBkUcOkFGr+86F6zNEfOroIh+edwrRPf8iohqzlNNX7BmQK035/GyOzr0CqxU5h2udfEjmNZF8up1DmMO07LysFy9k5zq6VxxTEfeuRTy/nVWG+yExh2uzn4uPkw8HoQ8/LfkqRxu6rxs0Upo352IdEh8Vd7WQK00b9kTCqw9TF2GqoU5i2649HeXwRMxE/DSfQ3mWBGfIAAAAASUVORK5CYII=" alt="QR code to send $50 via PayPal" width="168" height="168" hidden><span class="support-qr-note" id="supportQrNote">Scan to send $25 — or tap an amount to open PayPal with it filled in</span></span></span>
   </div>
 
-  <div class="budget-bar" id="budgetBar" aria-live="polite">
-    <span class="budget-label" id="budgetLabel">Trophy Room value</span>
-    <span class="budget-amount" id="budgetAmount">—</span>
-    <span class="budget-note" id="budgetNote"></span>
-  </div>
-
-  <section class="afford-bar" id="affordBar" aria-label="What it takes to comfortably afford this collection">
-    <div class="afford-top">
-      <span class="afford-label" id="affordLabel">Comfortably afford this room</span>
-      <div class="seg" role="group" aria-label="Comfort level" id="affordTierSeg">
-        <button type="button" data-tier="0" aria-pressed="false">Aggressive</button>
-        <button type="button" data-tier="1" aria-pressed="true">Ambitious</button>
-        <button type="button" data-tier="2" aria-pressed="false">Comfortable</button>
-        <button type="button" data-tier="3" aria-pressed="false">Very comfortable</button>
-      </div>
-      <button type="button" class="afford-toggle" id="affordToggle" aria-expanded="true" aria-controls="affordPanel"><span class="afford-toggle-text">Hide</span><span class="afford-chev" aria-hidden="true">&#9662;</span></button>
+  <div class="budget-bar is-collapsed" id="budgetBar" aria-live="polite">
+    <div class="budget-top">
+      <span class="budget-label" id="budgetLabel">Trophy Room value</span>
+      <span class="budget-amount" id="budgetAmount">—</span>
+      <span class="budget-note" id="budgetNote"></span>
+      <button type="button" class="afford-toggle" id="affordToggle" aria-expanded="false" aria-controls="affordPanel"><span class="afford-toggle-text">Elaborate</span><span class="afford-chev" aria-hidden="true">&#9662;</span></button>
     </div>
-    <div class="afford-panel" id="affordPanel">
+    <div class="afford-panel" id="affordPanel" hidden>
+      <div class="afford-subhead">
+        <span class="afford-label" id="affordLabel">Comfortably afford this room</span>
+        <div class="seg" role="group" aria-label="Comfort level" id="affordTierSeg">
+          <button type="button" data-tier="0" aria-pressed="false">Aggressive</button>
+          <button type="button" data-tier="1" aria-pressed="true">Ambitious</button>
+          <button type="button" data-tier="2" aria-pressed="false">Comfortable</button>
+          <button type="button" data-tier="3" aria-pressed="false">Very comfortable</button>
+        </div>
+      </div>
     <div class="afford-grid">
       <div class="afford-stat">
         <div class="afford-stat-head"><span class="afford-stat-k">Net worth to have</span></div>
@@ -1999,7 +2085,7 @@
     </div>
     <p class="afford-note" id="affordNote"></p>
     </div>
-  </section>
+  </div>
 
   <!-- ============ TROPHY ROOM ============ -->
   <main id="roomView">
@@ -2026,7 +2112,7 @@
       <span class="add-list cmp-pick-list shape-car-list" id="shapeCarList" role="menu" aria-label="Car photographs to place on the canvas" hidden></span>
     </div>
     <button type="button" class="shape-tab" id="shapeTab" hidden>Shapes</button>
-    <div class="floor-head"><h2>The Floor</h2><span class="floor-note">Arrange it your way</span><span class="add-wrap"><button class="add-plus" id="btnAddPlus" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="addMenu" title="Add another car" aria-label="Add another car">+</button><span class="add-menu" id="addMenu" hidden><input class="add-search" id="addSearch" type="search" placeholder="Search cars — try &lsquo;bmw&rsquo;" aria-label="Search cars to add" autocomplete="off"><span class="add-list" id="addList" role="menu" aria-label="Cars you can add"></span><span class="add-menu-note">Added cars join the stage as photos, like the rest — drag them anywhere, and hover any photo for the Replace button or the &#10005; that takes it back off the floor.</span></span></span><span class="floor-actions"><button class="ghost-btn" id="btnTheater" aria-pressed="false">Theater mode</button><button class="ghost-btn" id="btnLayouts" aria-expanded="false" aria-controls="layoutPanel">Floor layouts</button><button class="ghost-btn" id="btnUndo" type="button" disabled title="Undo the last floor change (Ctrl+Z)">Undo</button><button class="ghost-btn" id="btnReset">Reset the floor</button></span></div>
+    <div class="floor-head"><h2>The Floor</h2><span class="add-wrap"><button class="add-plus" id="btnAddPlus" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="addMenu" title="Add another car" aria-label="Add another car">+</button><span class="add-menu" id="addMenu" hidden><input class="add-search" id="addSearch" type="search" placeholder="Search cars — try &lsquo;bmw&rsquo;" aria-label="Search cars to add" autocomplete="off"><span class="add-list" id="addList" role="menu" aria-label="Cars you can add"></span><span class="add-menu-note">Added cars join the stage as photos, like the rest — drag them anywhere, and hover any photo for the Replace button or the &#10005; that takes it back off the floor.</span></span></span><span class="floor-actions"><button class="ghost-btn" id="btnTheater" aria-pressed="false">Theater mode</button><button class="ghost-btn" id="btnLayouts" aria-expanded="false" aria-controls="layoutPanel">Floor layouts</button><button class="ghost-btn" id="btnReset">Reset the floor</button></span></div>
     <div class="layout-panel" id="layoutPanel" hidden>
       <div class="layout-head"><span class="layout-title">Floor layouts</span><span class="layout-note">Five named arrangements, saved in this browser.</span></div>
       <div class="layout-slots" id="layoutSlots"></div>
@@ -9180,8 +9266,6 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
     (compact ? '' :
       '<div class="grip" role="button" tabindex="0" aria-label="Drag to move this card anywhere on the floor">' +
         '<span class="dots" aria-hidden="true">&#10303;</span>' +
-        '<span class="grip-label">Drag to move</span>' +
-        '<span class="grip-slot"></span>' +
       '</div>') +
     '<div class="stage">' +
       '<div class="shade"></div>' +
@@ -9336,9 +9420,6 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
   var skinPick = card.querySelector('.skin-pick');
   var skinCat = null;   // the Under-the-skin tab open on this card
   var specName = null;   // the colors photo currently shown, if any
-  var gripSlot = card.querySelector('.grip-slot');
-  if (gripSlot) gripSlot.textContent = slotLabel || '';
-
   var cfg = { paint:'stock', light:'studio', wheels:0, calipers:0, aero:0, interior:0, stitch:0, livery:0 };
   var cfgLive = false;   // true only once the visitor actually changes an option
   var currentId = defId;
@@ -10281,28 +10362,40 @@ function layoutFloor(){
   var band = theaterBandActive() ? theaterBand() : null;
   var leftEdge = band ? band.l : 0;
   var rightEdge = band ? band.r : W;
+  /* on the regular floor each row's cards sit centered as a group
+     in the floor's width (a lone card centers too); inside the
+     theater band the packing stays at the band's left edge,
+     exactly as before */
+  function rowStartX(rowWidth){
+    if (band) return leftEdge;
+    return leftEdge + Math.max(0, (rightEdge - leftEdge - rowWidth) / 2);
+  }
   if (!wide){
     floorCards.forEach(function(fc){
-      fc.el.style.left = leftEdge + 'px'; fc.el.style.top = y + 'px';
+      fc.el.style.left = rowStartX(fc.el.offsetWidth) + 'px'; fc.el.style.top = y + 'px';
       y += fc.el.offsetHeight + GAP;
     });
   } else {
     for (var i = 0; i < floorCards.length; i += 2){
       var a = floorCards[i], b = floorCards[i + 1];
       var rowH = a.el.offsetHeight;
-      a.el.style.left = leftEdge + 'px'; a.el.style.top = y + 'px';
       if (b){
-        var bx = leftEdge + a.el.offsetWidth + GAP;
         /* a pair wider than the floor stacks instead of spilling
-           past the right edge */
-        if (bx + b.el.offsetWidth > rightEdge){
+           past the right edge \u2014 each card then centers on its
+           own row */
+        if (leftEdge + a.el.offsetWidth + GAP + b.el.offsetWidth > rightEdge){
+          a.el.style.left = rowStartX(a.el.offsetWidth) + 'px'; a.el.style.top = y + 'px';
           y += rowH + GAP;
-          b.el.style.left = leftEdge + 'px'; b.el.style.top = y + 'px';
+          b.el.style.left = rowStartX(b.el.offsetWidth) + 'px'; b.el.style.top = y + 'px';
           rowH = b.el.offsetHeight;
         } else {
-          b.el.style.left = bx + 'px'; b.el.style.top = y + 'px';
+          var startX = rowStartX(a.el.offsetWidth + GAP + b.el.offsetWidth);
+          a.el.style.left = startX + 'px'; a.el.style.top = y + 'px';
+          b.el.style.left = (startX + a.el.offsetWidth + GAP) + 'px'; b.el.style.top = y + 'px';
           rowH = Math.max(rowH, b.el.offsetHeight);
         }
+      } else {
+        a.el.style.left = rowStartX(a.el.offsetWidth) + 'px'; a.el.style.top = y + 'px';
       }
       y += rowH + GAP;
     }
@@ -10760,19 +10853,21 @@ function refreshAfford(total){
     affordPeriod = b.getAttribute('data-period');
     refreshAfford();
   });
-  /* Collapse toggle: hides and shows the grid + note panel under
-     the header (label, tier seg and toggle stay put). Opens
-     expanded every load; the state is never saved. */
+  /* Elaborate toggle: the affordability detail lives inside the
+     Trophy Room value bar as one box now. Collapsed is the default
+     and shows nothing of it at all \u2014 no label, no tier buttons,
+     no figures, no note; Elaborate opens the panel inside the same
+     bar and the button reads Hide. The state is never saved. */
   var affordToggle = document.getElementById('affordToggle');
   var affordPanel = document.getElementById('affordPanel');
   if (affordToggle && affordPanel) affordToggle.addEventListener('click', function(){
     var collapsed = !affordPanel.hidden;
     affordPanel.hidden = collapsed;
     affordToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    var bar = document.getElementById('affordBar');
+    var bar = document.getElementById('budgetBar');
     if (bar) bar.classList.toggle('is-collapsed', collapsed);
     var txt = affordToggle.querySelector('.afford-toggle-text');
-    if (txt) txt.textContent = collapsed ? 'Show' : 'Hide';
+    if (txt) txt.textContent = collapsed ? 'Elaborate' : 'Hide';
   });
 })();
 /* ================= MONEY BARS — per view =================
@@ -10799,10 +10894,8 @@ function refreshCompareMoney(){
 }
 function syncMoney(){
   var bb = document.getElementById('budgetBar');
-  var ab = document.getElementById('affordBar');
   var hide = moneyView === 'garage' || moneyView === 'stages';
   if (bb) bb.hidden = hide;
-  if (ab) ab.hidden = hide;
   if (hide) return;
   var bl = document.getElementById('budgetLabel');
   var al = document.getElementById('affordLabel');
@@ -10975,8 +11068,7 @@ if (btnAddPlus){
    taking a car off the floor, deleting or overwriting a saved
    layout slot, loading a layout, resetting the floor, and the
    first move of a drag (grip or resize corner) or a keyboard
-   nudge. Ctrl+Z — or the Undo button in the floor head, for
-   phones — restores the newest snapshot, floor and layout slots
+   nudge. Ctrl+Z restores the newest snapshot, floor and layout slots
    together, through the same rebuild the saved layouts use, so
    a car taken off the floor by accident is one keystroke from
    back. (It was never deleted from the catalog — it sat in the
@@ -11060,12 +11152,13 @@ function addCarToFloor(id){
   });
   var grip = c.el.querySelector('.grip');
   var rm = document.createElement('button');
-  rm.type = 'button'; rm.className = 'grip-remove'; rm.textContent = '\u2715 Remove';
+  rm.type = 'button'; rm.className = 'grip-remove'; rm.textContent = '';
   rm.setAttribute('aria-label', 'Remove this card from the floor');
   rm.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
   rm.addEventListener('click', function(e){ e.stopPropagation(); removeFloorCard(entry); });
   grip.appendChild(rm);
   attachReplaceButton(entry);
+  attachFullscreenButton(entry);
   attachTheaterDetails(entry);
   /* a car added while theater is on joins theater like the rest —
      photo only, at the theater size, with the width it had before
@@ -11140,12 +11233,13 @@ function attachStarterRemove(entry){
   var grip = entry.el.querySelector('.grip');
   if (!grip || grip.querySelector('.grip-remove')) return;
   var rm = document.createElement('button');
-  rm.type = 'button'; rm.className = 'grip-remove'; rm.textContent = '\u2715 Remove';
+  rm.type = 'button'; rm.className = 'grip-remove'; rm.textContent = '';
   rm.setAttribute('aria-label', 'Remove this car from the floor');
   rm.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
   rm.addEventListener('click', function(e){ e.stopPropagation(); removeFloorCard(entry); });
   grip.appendChild(rm);
   attachReplaceButton(entry);
+  attachFullscreenButton(entry);
   attachTheaterDetails(entry);
 }
 /* ================= REPLACE A CAR — swap in place ===============
@@ -11191,6 +11285,50 @@ function syncTheaterDetailsBtn(card){
   var only = card.classList.contains('image-only');
   gd.textContent = only ? 'Details' : 'Hide details';
   gd.setAttribute('aria-pressed', only ? 'false' : 'true');
+}
+/* ================= FULLSCREEN \u2014 one card's photo, full screen ==
+   Between Replace and the round \u2715 on every floor card sits a
+   fullscreen icon. Tapping it opens an in-page overlay holding
+   just the photo that card is currently showing, edge to edge on
+   black with no card chrome at all; a tap anywhere on it, or Esc,
+   closes it. (The native fullscreen API is blocked inside the app
+   frame, so the overlay stands in for it.) It works the same on
+   the regular floor, on image-only cards and in theater, because
+   it only ever reads the card's current photo. */
+var cardFsOverlay = document.getElementById('cardFsOverlay');
+var cardFsImg = document.getElementById('cardFsImg');
+function openCardFullscreen(cardEl){
+  if (!cardFsOverlay || !cardFsImg || !cardEl) return;
+  var src = (typeof cardPhotoSrc === 'function') ? cardPhotoSrc(cardEl) : '';
+  if (!src){
+    var onFrame = cardEl.querySelector('.stage .frame.on');
+    if (onFrame) src = onFrame.currentSrc || onFrame.getAttribute('src') || '';
+  }
+  if (!src){
+    var anyImg = cardEl.querySelector('.stage img');
+    if (anyImg) src = anyImg.currentSrc || anyImg.getAttribute('src') || '';
+  }
+  if (!src) return;
+  cardFsImg.src = src;
+  cardFsOverlay.hidden = false;
+}
+function closeCardFullscreen(){
+  if (cardFsOverlay) cardFsOverlay.hidden = true;
+}
+if (cardFsOverlay) cardFsOverlay.addEventListener('click', function(){ closeCardFullscreen(); });
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && cardFsOverlay && !cardFsOverlay.hidden) closeCardFullscreen();
+});
+function attachFullscreenButton(entry){
+  var grip = entry.el.querySelector('.grip');
+  if (!grip || grip.querySelector('.grip-fullscreen')) return;
+  var fs = document.createElement('button');
+  fs.type = 'button'; fs.className = 'grip-fullscreen';
+  fs.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+  fs.setAttribute('aria-label', 'Show this car\u2019s photo full screen');
+  fs.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+  fs.addEventListener('click', function(e){ e.stopPropagation(); openCardFullscreen(entry.el); });
+  grip.appendChild(fs);
 }
 function attachTheaterDetails(entry){
   var grip = entry.el.querySelector('.grip');
@@ -12504,7 +12642,55 @@ function showView(which){
     var sl = document.getElementById('stagesList');
     if (sl) healGuardedImgs(sl);
   }
+  /* tab switches ride to the top smoothly instead of jumping \u2014
+     instantly when the visitor prefers reduced motion */
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
 }
+/* ================= SUPPORT \u2014 amount chips + QR ================
+   The Support button opens a small panel: three amount chips, each
+   a direct link to that amount's prefilled PayPal page (the payer
+   lands on login + confirm with the amount already filled \u2014 no
+   collect/send steps), and a QR code for the selected amount
+   (default $25) encoding the same link for a phone camera. Tapping
+   a chip updates the selection and the QR; the panel closes on an
+   outside click or Esc. */
+(function(){
+  var wrap = document.getElementById('supportWrap');
+  var btn = document.getElementById('btnSupport');
+  var panel = document.getElementById('supportPanel');
+  var qrs = panel ? panel.querySelectorAll('.support-qr') : [];
+  var note = document.getElementById('supportQrNote');
+  if (!wrap || !btn || !panel) return;
+  function setPanel(open){
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    setPanel(panel.hidden);
+  });
+  panel.addEventListener('click', function(e){ e.stopPropagation(); });
+  document.addEventListener('click', function(e){
+    if (!panel.hidden && !wrap.contains(e.target)) setPanel(false);
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && !panel.hidden) setPanel(false);
+  });
+  panel.querySelectorAll('.support-chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      var amt = chip.getAttribute('data-amount');
+      panel.querySelectorAll('.support-chip').forEach(function(c){
+        c.setAttribute('aria-pressed', c === chip ? 'true' : 'false');
+      });
+      qrs.forEach(function(img){
+        img.hidden = img.getAttribute('data-qr') !== amt;
+      });
+      if (note) note.textContent = 'Scan to send $' + amt + ' \u2014 or tap an amount to open PayPal with it filled in';
+    });
+  });
+})();
+
 btnRoom.addEventListener('click', function(){ showView('room'); });
 btnGarage.addEventListener('click', function(){ showView('garage'); });
 btnCompare.addEventListener('click', function(){ showView('compare'); });
@@ -15366,45 +15552,19 @@ document.addEventListener('keydown', function(e){
       if (signInBtn) signInBtn.hidden = true;
       if (signOutBtn) signOutBtn.hidden = false;
     } else {
-      statusEl.textContent = 'Not signed in';
+      statusEl.textContent = '';
       if (signInBtn) signInBtn.hidden = false;
       if (signOutBtn) signOutBtn.hidden = true;
     }
   }
-  /* Why sign-in used to fail here: the room runs inside the app's
-     embedded frame (and in phone webviews), and Firebase's popup
-     flow depends on a separate window posting its result back
-     across that frame boundary — the popup is blocked outright,
-     or it opens and its answer never arrives, so the promise
-     rejects and the old handler showed one generic line for every
-     cause. The fix: when the page is framed, go straight to
-     Firebase's redirect flow, which navigates this frame to
-     Google and back instead of relying on a popup handshake; in a
-     standalone browser tab keep the popup, but fall back to the
-     redirect when the popup is blocked or the environment refuses
-     it. Every failure now names its actual cause (the Firebase
-     error code), so a remaining blocker — most often this page's
-     address missing from the Firebase console's authorized
-     domains — is visible instead of silent. */
-  function authErrorMessage(err){
-    var code = (err && err.code) ? String(err.code) : '';
-    if (code === 'auth/unauthorized-domain'){
-      return 'Google sign-in is not switched on for this page\u2019s web address yet. In the Firebase console (project trophy-room-7a84e) open Authentication \u2192 Settings \u2192 Authorized domains and add this page\u2019s domain, then try again. The room still works without signing in.';
-    }
-    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request'){
-      return 'The Google window was closed before sign-in finished. Tap Sign in with Google to try again \u2014 the room still works without signing in.';
-    }
-    if (code === 'auth/network-request-failed'){
-      return 'Sign-in could not reach Google \u2014 check the connection and try again. The room still works without signing in.';
-    }
-    if (code === 'auth/web-storage-unsupported' || code === 'auth/operation-not-supported-in-this-environment'){
-      return 'This browser is blocking the storage Google sign-in needs. Allow cookies/storage for this page, or open the room in a regular browser tab, then try again.';
-    }
-    if (code){
-      return 'Sign-in did not complete (' + code + '). The room still works without signing in.';
-    }
-    return 'Sign-in did not complete. The room still works without signing in.';
-  }
+  /* Sign-in is redirect-based only, the way sites like Pinterest
+     do it: tapping Sign in with Google navigates this very page to
+     Google and back \u2014 no separate popup window ever opens, so
+     there is nothing for the app frame or a phone webview to block
+     or strand. And no failure is ever announced: if sign-in is
+     interrupted or refused for any reason, the button simply
+     resets and the room stays exactly as it was, unsigned, with no
+     message anywhere \u2014 the visitor just taps Sign in again. */
   var signInBusy = false;
   function setSignInBusy(busy){
     signInBusy = busy;
@@ -15414,62 +15574,28 @@ document.addEventListener('keydown', function(e){
     }
   }
   function startRedirectSignIn(provider){
-    if (statusEl) statusEl.textContent = 'Taking you to Google to finish signing in\u2026';
     try {
-      auth.signInWithRedirect(provider).catch(function(err){
+      auth.signInWithRedirect(provider).catch(function(){
         setSignInBusy(false);
-        if (statusEl) statusEl.textContent = authErrorMessage(err);
       });
     } catch(e){
       setSignInBusy(false);
-      if (statusEl) statusEl.textContent = authErrorMessage(e);
     }
   }
   if (signInBtn) signInBtn.addEventListener('click', function(){
     if (signInBusy) return;
-    if (!fbReady || !auth){
-      if (statusEl) statusEl.textContent = 'Sign-in is unavailable right now. The room still works without signing in.';
-      return;
-    }
+    if (!fbReady || !auth) return;
     var provider = new firebase.auth.GoogleAuthProvider();
-    var framed = false;
-    try { framed = window.self !== window.top; } catch(e){ framed = true; }
     setSignInBusy(true);
-    if (framed){
-      /* inside the app frame a popup cannot complete \u2014 go
-         straight to the redirect flow */
-      startRedirectSignIn(provider);
-      return;
-    }
-    try {
-      auth.signInWithPopup(provider).then(function(){
-        setSignInBusy(false);
-      }).catch(function(err){
-        var code = (err && err.code) ? String(err.code) : '';
-        if (code === 'auth/popup-blocked' || code === 'auth/internal-error' ||
-            code === 'auth/web-storage-unsupported' || code === 'auth/operation-not-supported-in-this-environment'){
-          /* the popup route is refused here \u2014 the redirect
-             route navigates this page instead of opening a window */
-          startRedirectSignIn(provider);
-          return;
-        }
-        setSignInBusy(false);
-        if (statusEl) statusEl.textContent = authErrorMessage(err);
-      });
-    } catch(e){
-      setSignInBusy(false);
-      if (statusEl) statusEl.textContent = authErrorMessage(e);
-    }
+    startRedirectSignIn(provider);
   });
-  /* complete a redirect sign-in on return, and surface its real
-     error if Google sent one back */
+  /* complete a redirect sign-in on return \u2014 silently, either way */
   if (fbReady && auth && auth.getRedirectResult){
     try {
       auth.getRedirectResult().then(function(result){
         if (result && result.user) setSignInBusy(false);
-      }).catch(function(err){
+      }).catch(function(){
         setSignInBusy(false);
-        if (statusEl) statusEl.textContent = authErrorMessage(err);
       });
     } catch(e){}
   }
@@ -16161,5 +16287,6 @@ document.addEventListener('keydown', function(e){
 })();
 </script>
 
+  <div class="card-fs-overlay" id="cardFsOverlay" hidden role="dialog" aria-label="Car photo, full screen — tap anywhere to close"><img id="cardFsImg" alt="Car photo, full screen"></div>
 </body>
 </html>
