@@ -8922,6 +8922,7 @@ function makeViewer(stageEl, chipEl, degEl, sliderEl, paintNameEl, hooks){
   var frames = [], angles = [], flips = [], paintId = 'stock';
   var baseFx = null;         // configurator option effects (wheels, calipers, aero, livery, interior)
   var theta = 40;            // degrees, continuous, wraps 0..360
+  var joined = false;        // has this viewer taken its first car yet — the shared clock is joined on that first load only (see setCar)
   var spinning = true;       // gentle turntable until the visitor grabs it
   var shownA = -1, shownB = -1;   // frame indices currently on each layer
   var wantA = '', wantB = '';     // the exact src each layer is meant to hold
@@ -9189,6 +9190,40 @@ function makeViewer(stageEl, chipEl, degEl, sliderEl, paintNameEl, hooks){
     applyTint(tintKeys);
   }
   function setAngleDeg(d){ theta = d; render(); }
+  /* ================= RELEASE SNAP — settle on a solid frame ====
+     While a drag or a slider pull is in flight the turn keeps its
+     fluid crossfade (see render): inside the blend window — the
+     middle 34% of a sector, centred on the sector boundary — the
+     incoming photo is only part-way in, so the picture on screen
+     is two photos ghosting through each other. That is right
+     mid-gesture and wrong as a resting state: let go inside the
+     window and the card used to park on the double-exposure for
+     good (Temerario Blu Eleos at ~90°, Aventador SV at 315°).
+     So on release the angle settles: if it sits inside the blend
+     window it moves the smallest distance to the window's nearest
+     edge — the nearest angle where the blend ease is exactly 0
+     (the current photo alone, full opacity) or exactly 1 (the
+     next photo alone, painted over the base at full opacity).
+     Outside the window the angle is already solid and does not
+     move at all. The frames, their order and the sector sweep are
+     untouched — theta only ever lands on angles render() already
+     paints from the turn's own photos, so a gap in a turn (a slot
+     with no photo) can never become a blank frame: the expanded
+     turn simply has fewer, wider sectors, and the snap stays
+     inside whichever sector the visitor let go in. */
+  function snapToSolid(){
+    var n = frames.length;
+    if (n <= 1) return;              // a one-photo car never blends
+    var step = 360 / n;
+    var deg = ((theta % 360) + 360) % 360;
+    var ft = deg / step;
+    var fr = ft - Math.floor(ft);
+    var bw = 0.34;                   // render()'s blend window — keep in step with it
+    var lo = 0.5 - bw / 2, hi = 0.5 + bw / 2;   // ease is exactly 0 at lo, exactly 1 at hi
+    if (fr <= lo || fr >= hi) return;           // already parked on a single solid photo
+    var target = (fr - lo <= hi - fr) ? lo : hi;   // nearest solid edge, smallest move
+    setAngleDeg(theta + (target - fr) * step);
+  }
   function setCar(car){
     frames = (car.frames && car.frames.length) ? car.frames.slice() : [car.img];
     angles = car.angles || [];
@@ -9212,11 +9247,19 @@ function makeViewer(stageEl, chipEl, degEl, sliderEl, paintNameEl, hooks){
        it still holds from a previous car, so a stale request cannot
        fail later and tile over a healthy card */
     if (frames.length <= 1) lb.removeAttribute('src');
-    // join the shared turn: a multi-angle car opens on whatever stop
-    // the shared clock is on right now, so it is already in step with
-    // every other card on the page (at first load that is stop one,
-    // the front three-quarter, for all of them at once)
-    theta = frames.length > 1 ? syncAngle() : 40;
+    // join the shared turn — on this viewer's FIRST car only: a
+    // multi-angle car opens on whatever stop the shared clock is
+    // on right now, so it is already in step with every other card
+    // on the page (at first load that is stop one, the front
+    // three-quarter, for all of them at once). Every later setCar
+    // is a colour-dot switch (or a twin refresh) on a card the
+    // visitor is already looking at: the angle they left the turn
+    // on is THEIRS, so theta is left exactly where it is — the
+    // turn must never jump back to the shared clock under them.
+    if (!joined){
+      joined = true;
+      theta = frames.length > 1 ? syncAngle() : 40;
+    }
     render();
     /* guard both layers like every other photo in the room (see
        guardImg): same-clean-URL retries, the car's next frame as
@@ -9257,12 +9300,20 @@ function makeViewer(stageEl, chipEl, degEl, sliderEl, paintNameEl, hooks){
     setAngleDeg(theta + dx * 0.55);
   });
   ['pointerup','pointercancel'].forEach(function(ev){
-    stageEl.addEventListener(ev, function(){ dragging = false; });
+    stageEl.addEventListener(ev, function(){
+      if (!dragging) return;
+      dragging = false;
+      snapToSolid();   // let go mid-blend and the turn settles on one solid photo, never the ghost
+    });
   });
   sliderEl.addEventListener('input', function(){
     spinning = false;
     setAngleDeg(sliderEl.value / 1000 * 360);
   });
+  /* 'change' is the slider's release (a mouse / touch pull commits
+     it on let-go): the same settle as the drag's pointer-up, so a
+     ROTATE pull never parks mid-blend either */
+  sliderEl.addEventListener('change', function(){ snapToSolid(); });
   /* idle turntable: every card reads the shared clock (see syncAngle
      above), so at any moment all the auto-turning cars sit on the
      same stop — front three-quarter together, side together, rear
