@@ -114,6 +114,8 @@
   .toolbar.dock-right .support-panel{top:0;left:auto;right:calc(100% + 10px)}
   /* the dock switch: three quiet pills — Top · Left · Right */
   .dock-seg button{padding:9px 13px}
+  /* the corners preview switch: two quiet pills — Rounded · Square */
+  .corners-seg button{padding:9px 13px}
   @media (max-width:620px){
     .toolbar.dock-left,.toolbar.dock-right{width:132px}
     .toolbar.dock-left{left:8px}
@@ -2131,16 +2133,21 @@
     body.full-width:not(.theater) #floor .spot{width:100%}
   }
 
-  /* ============ SHARP CORNERS LIVE (re-push #30) ============
+  /* ============ SHARP CORNERS — PREVIEW ONLY, OFF BY DEFAULT ============
      90° square corners throughout: every card frame, the value
      bar, the floor itself, panels, sheets and the rectangular
      chrome (tabs, buttons, chips, badges, inputs) — no rounded
      edges on the big elements, and no corner marks or accents
      of any kind. True circles stay circles on purpose: the
      colour dots and the round ✕ / fullscreen buttons Ajash
-     asked to keep round. TO RESTORE THE ROUNDED LOOK: remove
-     the sharp class from <body> — every rule here is gated on
-     it and the original radius rules above are untouched. */
+     asked to keep round. This is NOT the live look: Ajash is
+     picky on this one and wants to see it first, so the page
+     loads rounded and the toolbar's Corners toggle (Rounded ·
+     Square) flips the sharp class on <body> for this session
+     only — nothing is saved, a refresh is rounded again, and
+     square only becomes the default when he says so. Every
+     rule here is gated on the class and the original radius
+     rules above are untouched. */
   body.sharp{--radius:0px}
   body.sharp #floor,
   body.sharp .support-panel,
@@ -2176,7 +2183,7 @@
   body.sharp input:not([type=range]){border-radius:0}
 </style>
 </head>
-<body class="full-width sharp">
+<body class="full-width">
 <div class="wrap">
 
   <header>
@@ -2201,6 +2208,10 @@
       <button type="button" data-dock="top" aria-pressed="true">Top</button>
       <button type="button" data-dock="left" aria-pressed="false">Left</button>
       <button type="button" data-dock="right" aria-pressed="false">Right</button>
+    </div>
+    <div class="seg corners-seg" role="group" aria-label="Corner style preview">
+      <button type="button" data-corners="rounded" aria-pressed="true">Rounded</button>
+      <button type="button" data-corners="square" aria-pressed="false">Square</button>
     </div>
   </div>
 
@@ -12977,6 +12988,30 @@ function showView(which){
       var mode = b.getAttribute('data-dock');
       applyDock(mode);
       try { window.localStorage.setItem(KEY, mode); } catch(e){}
+    });
+  });
+})();
+/* ================= CORNERS PREVIEW — Rounded · Square =================
+   Ajash is picky on the square-corners call and wants to see it
+   before it is done, so this is a preview, not a setting: the
+   page always loads rounded, Square flips the sharp class on
+   <body> so he can judge the real thing in place, and Rounded
+   (or a refresh) puts it straight back. Nothing is stored —
+   the choice is never saved, and square becomes the default
+   only when he approves it. */
+(function(){
+  var btns = document.querySelectorAll('.corners-seg button[data-corners]');
+  if (!btns.length) return;
+  function applyCorners(mode){
+    document.body.classList.toggle('sharp', mode === 'square');
+    btns.forEach(function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-corners') === mode ? 'true' : 'false');
+    });
+  }
+  applyCorners('rounded');
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      applyCorners(b.getAttribute('data-corners'));
     });
   });
 })();
