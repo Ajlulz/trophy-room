@@ -71,19 +71,54 @@
   /* ---------- view toggle ---------- */
   .toolbar{
     display:flex;flex-wrap:wrap;gap:12px;align-items:center;
-    /* pinned bar: the view tabs stay reachable from anywhere on the
-       page. top:-26px cancels the 26px top margin (sticky insets
-       measure to the margin edge), so the bar's own box lands flush
-       at the viewport top once it sticks; the old 6px bottom margin
-       is folded into the padding so no page content shows through a
-       transparent strip under the pinned bar. The solid --bg matches
-       the page background the bar covers while stuck, and z-index
-       200 lifts it over the floor and garage cards while staying
-       under the modal overlays (300+), the shape bar (850) and the
-       theater (4000). */
-    position:sticky;top:-26px;z-index:200;background:var(--bg);
-    box-shadow:0 14px 30px rgba(0,0,0,.5);
-    margin:26px 0 0;padding:14px 0 20px;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);
+    /* a floating group of buttons — no bar behind them at all.
+       The toolbar itself is fully transparent (no background, no
+       borders, no shadow), so the pills float straight over the
+       page and there is no backdrop to seam or glitch against the
+       photos scrolling underneath. Each control carries its own
+       --panel fill (the .seg always did; the sign-in and Support
+       pills get the same fill below), so the group reads as one
+       set of buttons wherever it docks. In the default top dock
+       the group stays sticky, with a small positive inset: the
+       whole group, padding included, sits inside the viewport
+       once it sticks, so no pill is ever cropped by the top edge
+       the way the old flush black bar cropped them. z-index 200
+       lifts it over the floor and garage cards while staying
+       under the modal overlays (300+), the shape bar (850) and
+       the theater (4000). */
+    position:sticky;top:10px;z-index:200;background:transparent;
+    margin:26px 0 6px;padding:6px 0;
+  }
+  /* side docks: the same group leaves the flow and pins to the
+     left or right edge as a vertical stack, centred on the edge */
+  .toolbar.dock-left,.toolbar.dock-right{
+    position:fixed;top:50%;transform:translateY(-50%);
+    flex-direction:column;flex-wrap:nowrap;align-items:stretch;
+    margin:0;padding:0;width:172px;
+  }
+  .toolbar.dock-left{left:12px}
+  .toolbar.dock-right{right:12px}
+  .toolbar.dock-left .seg,.toolbar.dock-right .seg{flex-direction:column}
+  .toolbar.dock-left .seg button,.toolbar.dock-right .seg button{text-align:center}
+  .toolbar.dock-left .auth-control,.toolbar.dock-right .auth-control{
+    margin-left:0;flex-direction:column;align-items:stretch;flex-wrap:nowrap;
+  }
+  .toolbar.dock-left .auth-control .ghost-btn,.toolbar.dock-right .auth-control .ghost-btn,
+  .toolbar.dock-left .support-link,.toolbar.dock-right .support-link{justify-content:center;text-align:center}
+  .toolbar.dock-left .auth-status,.toolbar.dock-right .auth-status{text-align:center}
+  .toolbar.dock-left .support-wrap,.toolbar.dock-right .support-wrap{display:flex}
+  .toolbar.dock-left .support-link,.toolbar.dock-right .support-link{flex:1}
+  /* from a side dock the Support panel opens inward, toward the
+     page, instead of dropping below the button off the edge */
+  .toolbar.dock-left .support-panel{top:0;right:auto;left:calc(100% + 10px)}
+  .toolbar.dock-right .support-panel{top:0;left:auto;right:calc(100% + 10px)}
+  /* the dock switch: three quiet pills — Top · Left · Right */
+  .dock-seg button{padding:9px 13px}
+  @media (max-width:620px){
+    .toolbar.dock-left,.toolbar.dock-right{width:132px}
+    .toolbar.dock-left{left:8px}
+    .toolbar.dock-right{right:8px}
+    .toolbar.dock-left .seg button,.toolbar.dock-right .seg button{padding:8px 10px}
   }
   .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px}
   .seg button{
@@ -102,10 +137,11 @@
   }
   .ghost-btn:hover{color:var(--text);border-color:var(--faint)}
   .toolbar .hint{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--faint);letter-spacing:.08em}
-  .auth-control{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  /* Sign in and Support sit together at the far right of the bar */
+  .auth-control{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto}
   .auth-status{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--faint);letter-spacing:.06em}
-  .auth-control .ghost-btn{padding:9px 15px;font-size:12.5px;white-space:nowrap}
-  .support-link{display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--gold);border-color:rgba(200,164,104,.45);padding:9px 15px;font-size:12.5px;white-space:nowrap}
+  .auth-control .ghost-btn{padding:9px 15px;font-size:12.5px;white-space:nowrap;background:var(--panel)}
+  .support-link{display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--gold);border-color:rgba(200,164,104,.45);padding:9px 15px;font-size:12.5px;white-space:nowrap;background:var(--panel)}
   .support-link:hover{color:var(--gold);border-color:var(--gold);background:rgba(200,164,104,.08)}
   .support-link svg{width:13px;height:13px;flex:none}
   .support-link:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
@@ -217,12 +253,16 @@
   .grip-fullscreen svg{width:13px;height:13px;flex:none}
   .grip-fullscreen:hover{color:var(--text);border-color:var(--faint)}
   .grip-fullscreen:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-  /* grip order, left to right after the drag dots: Replace pill,
-     fullscreen icon, round \u2715 \u2014 held by flex order so it is
-     the same whatever order the buttons were appended in */
-  .grip .grip-replace{order:1}
-  .grip .grip-fullscreen{order:2}
-  .grip .grip-remove{order:3}
+  /* grip order: the drag dots stay at the left and the button
+     cluster sits in the grip's right corner — Replace pill,
+     round \u2715, fullscreen icon in the far-right corner \u2014 held by
+     flex order so it is the same whatever order the buttons
+     were appended in, and the auto left margin on Replace —
+     the first button of the cluster — pushes the whole
+     cluster to the right end of the bar */
+  .grip .grip-replace{order:1;margin-left:auto}
+  .grip .grip-fullscreen{order:3}
+  .grip .grip-remove{order:2}
   /* on the regular floor Remove is just a round \u2715 in the corner,
      the same treatment theater already uses */
   #floor .spot .grip-remove{
@@ -867,7 +907,9 @@
      then can its dots be pressed */
   .spot .stage .colorway-row{
     position:absolute;left:0;right:0;bottom:0;z-index:5;margin:0;
-    padding:30px 14px 11px;
+    /* right padding keeps the colour name's tail clear of the
+       angle chip in the stage's bottom-right corner */
+    padding:30px 96px 11px 14px;
     background:linear-gradient(180deg,rgba(5,5,7,0),rgba(5,5,7,.85) 58%);
     opacity:0;pointer-events:none;transform:translateY(5px);
     /* fade in smoothly on hover, vanish instantly on mouse-out:
@@ -878,7 +920,7 @@
     transition:opacity 0s ease,transform 0s ease;
   }
   .spot:hover .stage .colorway-row,
-  .spot:focus-within .stage .colorway-row{opacity:1;pointer-events:auto;transform:none;transition:opacity .22s ease,transform .22s ease}
+  .spot:has(:focus-visible) .stage .colorway-row{opacity:1;pointer-events:auto;transform:none;transition:opacity .22s ease,transform .22s ease}
   /* touch has no hover to reveal the strip with, so on a
      coarse pointer the colors simply stay on the photo —
      the dots must remain tappable there */
@@ -891,6 +933,27 @@
      button always take their own clicks */
   .spot .stage .cfg-link{z-index:8}
   .spot .stage .details-btn{z-index:9}
+  /* the Image only button and the factory-configurator link are
+     hover-reveal chrome as well, in detail mode as much as in
+     image mode: hidden until the pointer is over the card or the
+     card holds keyboard focus — :focus-visible only, so a plain
+     click never leaves them stuck on (the same treatment as the
+     colorway strip). On touch there is no hover to reveal them
+     with, so there they simply stay on the photo. */
+  .spot .stage .details-btn,.gcard .stage .details-btn,
+  .spot .stage .cfg-link,.gcard .stage .cfg-link{
+    opacity:0;pointer-events:none;transition:opacity 0s ease,background .2s ease,color .2s ease;
+  }
+  .spot:hover .stage .details-btn,.gcard:hover .stage .details-btn,
+  .spot:hover .stage .cfg-link,.gcard:hover .stage .cfg-link,
+  .spot:has(:focus-visible) .stage .details-btn,.gcard:has(:focus-visible) .stage .details-btn,
+  .spot:has(:focus-visible) .stage .cfg-link,.gcard:has(:focus-visible) .stage .cfg-link{
+    opacity:1;pointer-events:auto;transition:opacity .22s ease,background .2s ease,color .2s ease;
+  }
+  @media (hover:none){
+    .spot .stage .details-btn,.gcard .stage .details-btn,
+    .spot .stage .cfg-link,.gcard .stage .cfg-link{opacity:1;pointer-events:auto}
+  }
   /* theater photos stay clean: no color strip over a photo —
      colors live on the full card there, as before */
   body.theater #floor .spot.image-only .stage .colorway-row{display:none !important}
@@ -1249,7 +1312,7 @@
 
   /* ---------- image only: photo with no name or details ---------- */
   .details-btn{
-    position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:7;
+    position:absolute;left:12px;top:12px;z-index:7;
     appearance:none;cursor:pointer;white-space:nowrap;
     font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
     background:rgba(8,8,10,.78);border:1px solid rgba(217,164,65,.55);color:var(--gold);
@@ -1259,7 +1322,7 @@
   .details-btn:hover{background:var(--gold);color:#141005}
   .details-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .spot.image-only .spot-meta,.gcard.image-only .spot-meta{display:none}
-  .fsheet .f-photo .details-btn{bottom:10px}
+  .fsheet .f-photo .details-btn{top:10px;left:10px}
   .fsheet.image-only .f-body{display:none}
 
   /* image only means ONLY the image: no banner across the top, no
@@ -1278,7 +1341,7 @@
   /* the floating banner owns the photo's top strip when it returns,
      so the badge and factory link drop just below it instead of
      hiding underneath it */
-  .spot.image-only .badge,.spot.image-only .cfg-link{top:48px}
+  .spot.image-only .badge,.spot.image-only .cfg-link,.spot.image-only .details-btn{top:48px}
   .spot.image-only .grip,
   .spot.image-only .badge,
   .spot.image-only .cfg-link,
@@ -1309,6 +1372,35 @@
   :is(.spot,.gcard).image-only:has(:focus-visible) .stage .shade{opacity:1;transition:opacity .25s ease}
   .fsheet.image-only:hover .f-photo::after,
   .fsheet.image-only:has(:focus-visible) .f-photo::after{opacity:1;transition:opacity .25s ease}
+
+  /* ---------- stuck-hover release ----------
+     Toggling Image only / Show details re-lays the floor out
+     under a pointer that may not move again: the card shrinks or
+     grows and its neighbours slide, and a browser can keep :hover
+     latched on this card long after the pointer has really left
+     it — the colors strip (and the rest of the hover chrome)
+     then stays up over a card nobody is hovering. buildCard
+     checks the pointer's real position once the layout passes
+     settle and pins .hover-off on a card the pointer is no
+     longer over; these rules force every hover reveal back off
+     while the pin is set. The pin clears the moment the pointer
+     genuinely moves over the card again (or a keyboard reader
+     tabs into it), so a real hover behaves exactly as before.
+     Hover-capable pointers only: on touch the strip is meant to
+     stay on the photo (see the hover:none rules above). */
+  @media (hover:hover){
+    .spot.hover-off .stage .colorway-row{
+      opacity:0 !important;pointer-events:none !important;transform:translateY(5px);
+    }
+    .spot.hover-off .stage .details-btn,.gcard.hover-off .stage .details-btn,
+    .spot.hover-off .stage .cfg-link,.gcard.hover-off .stage .cfg-link{
+      opacity:0 !important;pointer-events:none !important;
+    }
+    :is(.spot,.gcard).image-only.hover-off :is(.grip,.badge,.cfg-link,.angle-chip,.drag-hint,.details-btn,.resize-handle){
+      opacity:0 !important;pointer-events:none !important;
+    }
+    :is(.spot,.gcard).image-only.hover-off .stage .shade{opacity:0 !important}
+  }
 
   /* ---------- theater: the photos carry almost nothing ----------
      In theater mode a picture stays clean — clicking it, dragging
@@ -1357,7 +1449,7 @@
      keyboard focus — hover shows Replace and the ✕ and nothing
      else on the photo */
   body.theater #floor .spot .grip-remove{
-    position:absolute;top:7px;right:8px;z-index:30;margin:0;flex:none;
+    position:absolute;top:7px;right:48px;z-index:30;margin:0;flex:none;
     width:32px;height:32px;padding:0;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
     background:rgba(8,8,10,.78);border:1px solid rgba(217,164,65,.55);
@@ -1385,12 +1477,12 @@
   body.theater #floor .spot:hover .grip-replace,
   body.theater #floor .spot:focus-within .grip-replace{opacity:1;pointer-events:auto}
   body.theater #floor .spot .grip-replace:hover{background:var(--gold);color:#141005;border-color:var(--gold)}
-  /* the fullscreen icon: a round button between Replace and the
-     \u2715 in the same top-right corner, under the exact same
-     visibility rule \u2014 hidden until that photo is hovered or
-     holds keyboard focus */
+  /* the fullscreen icon: a round button in the far-right corner
+     of the same top-right cluster, the \u2715 immediately to its
+     left, under the exact same visibility rule \u2014 hidden until
+     that photo is hovered or holds keyboard focus */
   body.theater #floor .spot .grip-fullscreen{
-    position:absolute;top:7px;right:48px;z-index:30;margin:0;flex:none;
+    position:absolute;top:7px;right:8px;z-index:30;margin:0;flex:none;
     width:32px;height:32px;padding:0;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
     background:rgba(8,8,10,.78);border:1px solid rgba(217,164,65,.55);
@@ -2022,9 +2114,69 @@
     .scene-fx{display:none}
     html{scroll-behavior:auto}
   }
+
+  /* ============ FULL-WIDTH LIVE (re-push #30) ============
+     The room spans the whole screen: the centered 1240px column
+     is lifted and the floor cards lose their 560px cap, so card
+     pairs fill the floor edge to edge — no black bands down the
+     sides. TO RESTORE THE ORIGINAL CENTERED LAYOUT: remove the
+     full-width class from <body>. Every rule in this block is
+     gated on that class; the original .wrap and card-width
+     rules above are untouched and take over again. Theater
+     keeps its own widths (its cards are sized inline), and the
+     single-column phone layout is unchanged. */
+  body.full-width .wrap{max-width:none;margin:0}
+  body.full-width:not(.theater) #floor .spot{width:calc(50% - 11px)}
+  @media (max-width:900px){
+    body.full-width:not(.theater) #floor .spot{width:100%}
+  }
+
+  /* ============ SHARP CORNERS LIVE (re-push #30) ============
+     90° square corners throughout: every card frame, the value
+     bar, the floor itself, panels, sheets and the rectangular
+     chrome (tabs, buttons, chips, badges, inputs) — no rounded
+     edges on the big elements, and no corner marks or accents
+     of any kind. True circles stay circles on purpose: the
+     colour dots and the round ✕ / fullscreen buttons Ajash
+     asked to keep round. TO RESTORE THE ROUNDED LOOK: remove
+     the sharp class from <body> — every rule here is gated on
+     it and the original radius rules above are untouched. */
+  body.sharp{--radius:0px}
+  body.sharp #floor,
+  body.sharp .support-panel,
+  body.sharp .add-menu,
+  body.sharp .sheet,
+  body.sharp .stage-block,
+  body.sharp .stage-car,
+  body.sharp .stage-car-detailed,
+  body.sharp .fsheet,
+  body.sharp .afford-stat,
+  body.sharp .more-angles-item img,
+  body.sharp .sheet-img,
+  body.sharp .scene-live img,
+  body.sharp .scene-extras img,
+  body.sharp .support-qr,
+  body.sharp .photo-unavailable,
+  body.sharp .seg,
+  body.sharp .seg button,
+  body.sharp .ghost-btn,
+  body.sharp .chip-btn,
+  body.sharp .badge,
+  body.sharp .cfg-link,
+  body.sharp .details-btn,
+  body.sharp .angle-chip,
+  body.sharp .grip-replace,
+  body.sharp .grip-details,
+  body.sharp .swap-toggle,
+  body.sharp .skin-toggle,
+  body.sharp .support-chip,
+  body.sharp .afford-toggle,
+  body.sharp .add-item,
+  body.sharp select,
+  body.sharp input:not([type=range]){border-radius:0}
 </style>
 </head>
-<body>
+<body class="full-width sharp">
 <div class="wrap">
 
   <header>
@@ -2032,7 +2184,7 @@
     <p class="lede" id="lede">A private collection of the rarest cars in the world. Arrange the floor by hand, turn each car, and choose its factory colour from real cars.</p>
   </header>
 
-  <div class="toolbar">
+  <div class="toolbar" id="toolbar">
     <div class="seg" role="group" aria-label="Choose view">
       <button id="btnRoom" aria-pressed="true">Trophy Room</button>
       <button id="btnGarage" aria-pressed="false">Full Garage</button>
@@ -2045,6 +2197,11 @@
       <button type="button" class="ghost-btn" id="btnAuthSignOut" hidden>Sign out</button>
     </div>
     <span class="support-wrap" id="supportWrap"><button type="button" class="ghost-btn support-link" id="btnSupport" aria-haspopup="true" aria-expanded="false" aria-controls="supportPanel" title="Support the Trophy Room via PayPal"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>Support</button><span class="support-panel" id="supportPanel" hidden><span class="support-chips" role="group" aria-label="Choose a support amount"><a class="support-chip" data-amount="10" href="https://www.paypal.me/AjashX/10" target="_blank" rel="noopener noreferrer" aria-pressed="false">$10</a><a class="support-chip" data-amount="25" href="https://www.paypal.me/AjashX/25" target="_blank" rel="noopener noreferrer" aria-pressed="true">$25</a><a class="support-chip" data-amount="50" href="https://www.paypal.me/AjashX/50" target="_blank" rel="noopener noreferrer" aria-pressed="false">$50</a></span><img class="support-qr" data-qr="10" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAAEIAQAAAACLjVdSAAABjElEQVR4nO2Yu47EQAgEq0/+/1/uDYDx7CUbHUY368gaddBCPApkPnw/nwRfxT9W4EoQYxw/+6unOO1RXEQAEAhZgMX2OsVpXzxQJkXFwcjrdYrTdoXBMkLoSR9TFBJCrjx5zMejiguyVWTD0Kocd/qYorigqkOW5UiR+3WM0x6FNh6L2WIQ2+sUp338UbCxgmCMnSAyxWmjQhmTiIKjn9bwHeW0R2FZgsSxKhefyh/K/NCNYbKMfCifAqpOWlsMyrYyxWlbPBLT5W3abFQ2xWmfIgjMEg5KTVL1gf0j+VRZJqodhpUsU5y28ZiiNrKDcgNZBGSK006F4hhUyCEsyCE8y+lfK2q+VMVEKBa6y2OcdvKYFfwBWAliUpTNKKc9CoEWoxvsPAkdWS+xueS+D9FH7y13itO2eCR3xc4i1i7T6mOK4vd9fXHpOitPcdo4X97u60EkkSLn8emukB3gEclhH9hPN4WRslZy/OrQfX/baoPBCsx8ZDy2+zpU81g73hSnbfvcCB9fxUzFC7aCswpwG69NAAAAAElFTkSuQmCC" alt="QR code to send $10 via PayPal" width="168" height="168" hidden><img class="support-qr" data-qr="25" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAAEIAQAAAACLjVdSAAABjklEQVR4nO2ZS3LDMAxDHzK5/5XRBUjZXWVVmVPF+dkKFzBGJEBa5sPx+hTwjfjHEW9QzowMyPXp1SlIt/GBAYRAYJCFe3UM0n18FA1GYcOhKKtjkO6PUChREuc5HEMiZCQA1e9DOB6NeEMVEAyWlcRZq2OQ7uOjNkNliYWstToG6Z6Ie6lY6mJxLU9Bui1C9SqNtZYCo1lId0VYpiyYVvZg4eP8xwtqh0RaLOh0sc7cHzJLY+JBJMWdeRbSv4/AbUdx0eJ1abCnIN1XT01okUtVVHb9UL8uQHEdbk7yfWb9iMxGYbwafdc/o5D+eUSlxkVDKS1l3k+bf0RforA2VmQlxVRH1g8570hLmzIL+8j6YdX9x5U5piwpdGL9yO0DTUUXE2/EMSXivfwX3db2xqgebwrSbXxcAnsfFa6NMwXpNj6u7j6FdU2WObC/vc3XtaaFYaWeyExBupGPHL6dxKWd6T/6uA/XpdBxXL6kf6lWP3OyeuzgI/OF7vHbsF+NHCfOP349insQxzdiZsQPuMS6/01a0P0AAAAASUVORK5CYII=" alt="QR code to send $25 via PayPal" width="168" height="168"><img class="support-qr" data-qr="50" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAAEIAQAAAACLjVdSAAABl0lEQVR4nO2ZsXLDMAxDH3L+/19GB1Cyrkum0rwmzsJIGGAeRQKyzJvn9Q7wRfxjBF4FYoxtV7S3pzDtQVyQdxcIYWEZ36tTmDYiJFGVIsBCe3UW0z9HXHcoAEMqpJnHQIQxVupED/J4FHEBHNVgmaoOd/KYgvg1X47f2p7CtAdxdIpqpT7X2nhMQeA9XBOlMuy18WH18aqWgUHGdkJQZMgkpg2IC2QlAzksNW0tkqUpTDv1hzJWXBokuSGtZArTZj1Wh2brsQQfVx8qm5KpohKoOTcJpjDtRBgJ1cBdSkz9PJ5HVH0sM+vVXL1rZgrTxnzI28xlEe5JM4VpH0JeZr+Mvu07SZOYtiBkUcOkFGr+86F6zNEfOroIh+edwrRPf8iohqzlNNX7BmQK035/GyOzr0CqxU5h2udfEjmNZF8up1DmMO07LysFy9k5zq6VxxTEfeuRTy/nVWG+yExh2uzn4uPkw8HoQ8/LfkqRxu6rxs0Upo352IdEh8Vd7WQK00b9kTCqw9TF2GqoU5i2649HeXwRMxE/DSfQ3mWBGfIAAAAASUVORK5CYII=" alt="QR code to send $50 via PayPal" width="168" height="168" hidden><span class="support-qr-note" id="supportQrNote">Scan to send $25 — or tap an amount to open PayPal with it filled in</span></span></span>
+    <div class="seg dock-seg" role="group" aria-label="Toolbar position">
+      <button type="button" data-dock="top" aria-pressed="true">Top</button>
+      <button type="button" data-dock="left" aria-pressed="false">Left</button>
+      <button type="button" data-dock="right" aria-pressed="false">Right</button>
+    </div>
   </div>
 
   <div class="budget-bar is-collapsed" id="budgetBar" aria-live="polite">
@@ -2154,7 +2311,6 @@
 
   <!-- ============ COMPARE ============ -->
   <main id="compareView">
-    <p class="cmp-drag-hint" id="cmpDragHint">&#8592; Drag to scroll the row &#8594;</p>
     <div class="cmp-sheets" id="cmpSheets" tabindex="0" role="region" aria-label="Cars compared side by side — drag or scroll sideways to see more"></div>
     <section class="cmp-verdict" id="cmpVerdict" aria-label="The verdict — summary and feedback on the cars being compared"></section>
   </main>
@@ -2229,7 +2385,7 @@ var DB = {
   'tecnica':       { name:'Huracán Tecnica', note:'The sweet spot of the Huracán range — STO power at 631 hp, rear-drive, nose lift kept.', img:'assets/000/img-096.jpg', start:0,
                      frames:['assets/000/img-097.jpg','assets/000/img-098.jpg','assets/000/img-099.jpg','assets/000/img-096.jpg','assets/000/img-100.jpg','assets/000/img-101.jpg','assets/000/img-102.jpg','assets/000/img-103.jpg','assets/000/img-104.jpg'],
                      angles:['Front ¾','Front ¾','Front','Rear ¾','Rear ¾','Rear ¾','Rear ¾','Rear','Side'] },
-  'huracan-sto':   { name:'Huracán STO', note:'Super Trofeo Omologata — the race car Lamborghini made road legal: 631 hp, rear-drive, and more downforce than the Performante. The lead car is the Viola Pasifae car: a 2022 STO, VIN ZHWUA6ZX8NLA19980, shot by Exotic Luxury Visuals for Quantum Cars — the complete turn is that one car in one studio shoot, its QUANTUM CARS dealer plate blurred on the Rear and Rear ¾. Per colour: Viola Pasifae (the Quantum Cars car) — complete 5-angle turn, one car. Matte olive-grey — the Romans International car (Grigio Lynx under full satin PPF, Verde Selvans contrast scheme); the exact spec of the lead photo and very likely the same car, not proven — complete turn. Nero Nemesis, bronze wheels — angles complete but MIXED CARS: the lead is the Paris L\u2019Art de L\u2019Automobile car, and the Front, Side, Rear ¾ and Rear are four different bronze-wheeled Nero Nemesis cars — not one car. Verde Hydra — 5 of 5 angles but MIXED CARS: Front ¾, Side and Rear ¾ are the Limited Spec car; the straight Front and Rear are a second Verde Hydra car (P1 Exotics, satin Stealth PPF), its Montana plate blurred in the copy here. Blu Eleos (matt) — 3 of 5 angles, one car (Die Oldtimer Galerie): Front, Side and Rear ¾; no Front ¾ or straight Rear of this car has surfaced. Rosso Efesto — complete 5-angle turn, ONE car: the @pikachupcar car from its professional February 2025 shoot (plus the straight Front of the same car from July 2026), its DEDPUHL plate blurred on the Rear and Rear ¾. Matte black, black rims — complete 5-angle turn, one car: the Carbon Collection car (UK plate YJ21CVB), matte PPF over Nero Noctis on black Hek rims with gold centre locks — a different car from the bronze-wheeled Nero Nemesis dot. Rosso Efesto · AI recolor and Matte black · AI recolor are pixel-level recolors of the real Viola Pasifae photos — only the paint hue changed on the real photo pixels — and are labelled AI on their dots. Blu Laufey / Arancio — the original lead turn, Lamborghini\u2019s Blu Cepheus press car with orange accents, kept as its own dot.', img:'assets/000/img-105.jpg', start:0,
+  'huracan-sto':   { name:'Huracán STO', note:'631 hp, rear-drive — the race car Lamborghini made road legal, with more downforce than the Performante. Lead: the Viola Pasifae car, one car in one Quantum Cars studio shoot, complete turn. Viola Pasifae, matte olive-grey, Rosso Efesto and matte black are complete one-car turns (olive-grey likely the same car as the lead photo, unproven). Nero Nemesis with bronze wheels and Verde Hydra are complete on angles but mix cars. Blu Eleos matt is 3/5, one car. The two AI recolors are pixel-level repaints of the Viola photos, labelled AI. Blu Laufey / Arancio is the original Blu Cepheus press car.', img:'assets/000/img-105.jpg', start:0,
  frames:['assets/000/img-105.jpg','assets/000/img-106.jpg','assets/000/img-107.jpg','assets/000/img-108.jpg','assets/000/img-109.jpg','assets/000/img-110.jpg'],
  angles:['Front ¾','Front','Front ¾','Side','Rear ¾','Rear'] },
   'huracan-nowing':{ name:'Huracán EVO', note:'The wingless Huracán — no fixed rear wing, just the clean ducktail deck, with a 631 hp V10 and all-wheel drive.', img:'assets/000/img-111.jpg', start:0,
@@ -6327,9 +6483,6 @@ var CFG_URLS = {
   'revuelto-1016': 'https://configurator.lamborghini.com',
   'revuelto-1016-nowing': 'https://configurator.lamborghini.com',
   'revuelto-stock': 'https://configurator.lamborghini.com',
-  'tecnica-st': 'https://configurator.lamborghini.com',
-  'tecnica': 'https://configurator.lamborghini.com',
-  'huracan-nowing': 'https://configurator.lamborghini.com',
   '750s-lbwk': 'https://configurator.mclaren.com',
   '750s-stock': 'https://configurator.mclaren.com',
   'zr1x': 'https://www.chevrolet.com/performance/corvette?evar25=gm_com_homepage',
@@ -6342,6 +6495,18 @@ var CFG_URLS = {
   'x6m-stock': 'https://www.bmwusa.com/vehicles/m-models/x6-m/sports-activity-coupe/build-your-own.html',
   'x5m': 'https://www.bmwusa.com/vehicles/m-models/x5-m/sports-activity-vehicle/build-your-own.html'
 };
+/* The Huracán line is discontinued and Lamborghini's Huracán
+   configurator is gone with it, so no Huracán card ever carries
+   the factory configurator link. Every consumer of CFG_URLS goes
+   through factoryCfgUrl, which hard-blocks the whole family —
+   the Tecnicas, the STO, the EVO, the Super Trofeo, the LBWK car
+   and the Sterrato — even if a URL is ever added for one of them
+   by mistake. */
+var HURACAN_IDS = ['tecnica-st','tecnica','supertrofeo','huracan-sto','huracan-nowing','huracan-lbwk','huracan-sterrato'];
+function factoryCfgUrl(id){
+  if (HURACAN_IDS.indexOf(id) >= 0) return null;
+  return CFG_URLS[id] || null;
+}
 
 /* ================= TROPHY ROOM SLOTS — the exclusive rules ================= */
 /* The floor opens with the starting lineup — two columns, three
@@ -9249,6 +9414,28 @@ function openSheet(spec){
 }
 
 /* ================= CARD BUILDER ================= */
+/* How the reader last interacted — keyboard or pointer. A card's
+   hover chrome (the color strip across the photo, the Image only
+   button, the image-only banner) is revealed by hover OR by
+   keyboard focus (:focus-visible) inside the card. A pointer
+   click inside a card can leave focus parked on the control it
+   pressed, and in some browsers that parked focus matches
+   :focus-visible — so the colors stay showing after the pointer
+   has left the card. buildCard's pointerleave release below
+   hands that focus back, but only when the last interaction was
+   the pointer: a keyboard reader's focus is never taken away. */
+var lastInputModality = 'pointer';
+document.addEventListener('keydown', function(){ lastInputModality = 'keyboard'; }, true);
+document.addEventListener('pointerdown', function(){ lastInputModality = 'pointer'; }, true);
+/* Where the pointer actually is, kept current on every move and
+   press. buildCard's stuck-hover release reads this after an
+   Image only / Show details toggle re-lays the floor out, to
+   tell a card the pointer has really left from one it is still
+   over — the browser's own :hover bookkeeping cannot be trusted
+   across a layout that moves cards under a stationary pointer. */
+var lastPointerX = -1, lastPointerY = -1;
+document.addEventListener('pointermove', function(e){ lastPointerX = e.clientX; lastPointerY = e.clientY; }, true);
+document.addEventListener('pointerdown', function(e){ lastPointerX = e.clientX; lastPointerY = e.clientY; }, true);
 function buildCard(slotLabel, optionIds, defId, compact, hooks){
   var card = document.createElement('article');
   card.className = compact ? 'gcard' : 'spot';
@@ -9285,10 +9472,8 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
       '<div class="controls">' +
         '<div class="rot-row"><span class="rot-label">Rotate</span><input type="range" min="0" max="1000" value="200" aria-label="Rotate car view"><span class="deg">72&deg;</span></div>' +
         '<button type="button" class="more-angles-btn ghost-btn" hidden>More angles</button><div class="more-angles-panel" hidden></div>' +
-        '<button type="button" class="cfg-toggle" aria-expanded="false"><span>Configure this car</span><span class="cfg-toggle-sub">Paint · Wheels · Aero · Interior &#9662;</span></button>' +
-        '<div class="cfg-panel hide"></div>' +
         '<div class="var-block">' +
-          /* Swap car is a collapsible block under Configure this car,
+          /* Swap car is a collapsible block in the controls,
              closed by default like Under the hood: a toggle carrying
              the current car's name, with the swap bubbles in a panel
              beneath it. Full Garage cards (compact) carry no Swap car
@@ -9342,6 +9527,58 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
        joining the floor mid-theater */
     if (typeof syncTheaterDetailsBtn === 'function') syncTheaterDetailsBtn(card);
     if (hooks && hooks.onToggle) hooks.onToggle();
+    /* a mouse click must not leave focus parked on this button:
+       a card holding focus keeps its hover chrome — the color
+       strip included — revealed even with the pointer long gone,
+       so hand focus back and the strip hides on mouse-out again.
+       A keyboard toggle (a click with no detail) keeps focus. */
+    if (e.detail && detailsBtn.blur) detailsBtn.blur();
+    /* the toggle also re-lays the floor out (the layout passes
+       land ~90ms and ~520ms later): once they have, verify where
+       the pointer really is — if this card moved out from under
+       it, pin the hover chrome off so the colors never stay up
+       over a card nobody is hovering (see verifyHoverAfterToggle
+       below and the .hover-off CSS) */
+    setTimeout(verifyHoverAfterToggle, 160);
+    setTimeout(verifyHoverAfterToggle, 600);
+  });
+  /* the same rule for the whole card, whoever was clicked: when
+     the pointer leaves the card, any focus a pointer click left
+     parked on a control inside it — this button after a toggle
+     in a browser that keeps it, a color dot, the rotate slider,
+     a grip button — is handed back, so the hover chrome (the
+     color strip above all) hides the moment the pointer is gone
+     instead of staying up over a card nobody is hovering. A
+     keyboard reader's focus (lastInputModality) is left alone:
+     tabbing into a card keeps its chrome until focus moves on. */
+  card.addEventListener('pointerleave', function(){
+    if (lastInputModality !== 'pointer') return;
+    var ae = document.activeElement;
+    if (ae && ae.blur && (ae === card || card.contains(ae))) ae.blur();
+  });
+  /* stuck-hover release: after an Image only / Show details
+     toggle, the floor re-lays out in passes over the following
+     half second — this card shrinks or grows and the cards
+     around it slide — and a browser can keep :hover latched on
+     the card even though the pointer is somewhere else entirely,
+     leaving the colors strip up over a card nobody is hovering.
+     Boundary events alone cannot be trusted to clear that (they
+     are computed against the layout the pointer last moved in),
+     so verify against the pointer's real position instead: if
+     the point is no longer over this card, pin .hover-off (the
+     CSS forces every hover reveal back off) until the pointer
+     genuinely moves over the card again, or a keyboard reader
+     tabs into it — both clear the pin at once. */
+  function verifyHoverAfterToggle(){
+    if (lastPointerX < 0 || lastPointerY < 0) return;
+    var el = document.elementFromPoint(lastPointerX, lastPointerY);
+    if (!el || !card.contains(el)) card.classList.add('hover-off');
+  }
+  function releaseHoverOff(){ card.classList.remove('hover-off'); }
+  card.addEventListener('pointerenter', releaseHoverOff);
+  card.addEventListener('pointermove', releaseHoverOff);
+  card.addEventListener('focusin', function(){
+    if (lastInputModality === 'keyboard') releaseHoverOff();
   });
   var badge  = card.querySelector('.badge');
   var cfgPanel = card.querySelector('.cfg-panel');
@@ -9501,13 +9738,14 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
     cfgLive = true;
     viewer.setCfg({ paint: cfg.paint, fx: cfgFx() });
   }
-  /* --- swap car: the collapsible block under Configure this car ---
+  /* --- swap car: the collapsible block in the controls ---
      Swap car is a row of bubbles, the way variants used to be — one
-     tap swaps the card to that car. A floor slot's bubbles are its
-     own list; an added floor card, which carries the whole catalog,
-     groups its bubbles by category in a scrollable block so the
-     card stays a sane height. Full Garage cards have no swap list
-     at all — every car is already shown there on its own card.
+     tap swaps the card to that car. The bubbles list every other
+     car in the same brand as the car on the card — the whole
+     brand, not a per-slot shortlist — and a brand with more than
+     a dozen cars gets the scrollable block so the card stays a
+     sane height. Full Garage cards have no swap list at all —
+     every car is already shown there on its own card.
      The same car in a color a real car actually wears is picked
      from the color dots above the controls: a dot puts
      that real photo on the stage, and the car's own color dot
@@ -9518,8 +9756,10 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
        block is skipped there and only the specs below render */
     if (swapChips){
       swapChips.innerHTML = '';
-      var grouped = optionIds.length > 12;
-      swapChips.classList.toggle('swap-scroll', grouped);
+      var brandIds = (typeof ALL_IDS !== 'undefined' ? ALL_IDS : []).filter(function(oid){
+        return oid !== currentId && DB[oid] && catOf(oid) === catOf(currentId);
+      });
+      swapChips.classList.toggle('swap-scroll', brandIds.length > 12);
       function swapChip(oid){
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'chip-btn'; b.textContent = DB[oid].name;
@@ -9531,18 +9771,7 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
         });
         swapChips.appendChild(b);
       }
-      if (grouped){
-        CAT_ORDER.forEach(function(cat){
-          var ids = optionIds.filter(function(oid){ return catOf(oid) === cat; });
-          if (!ids.length) return;
-          var h = document.createElement('span');
-          h.className = 'swap-cat'; h.textContent = cat;
-          swapChips.appendChild(h);
-          ids.forEach(swapChip);
-        });
-      } else {
-        optionIds.forEach(swapChip);
-      }
+      brandIds.forEach(swapChip);
       if (swapPick) swapPick.textContent = DB[currentId].name;
     }
     /* a garage card carries no swap bubbles, so its var-block is
@@ -9582,6 +9811,13 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
       b.setAttribute('aria-label', 'Show this car in ' + label + ' — real photo');
       b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
       b.addEventListener('click', function(){ setSpec(sp); });
+      /* hovering or focusing a dot reads that colour's name in
+         the label at once, in detail mode and image mode alike;
+         leaving the dot restores the colour on the stage */
+      b.addEventListener('mouseenter', function(){ if (colorwayNameEl) colorwayNameEl.textContent = label; });
+      b.addEventListener('focus', function(){ if (colorwayNameEl) colorwayNameEl.textContent = label; });
+      b.addEventListener('mouseleave', function(){ if (colorwayNameEl) colorwayNameEl.textContent = specName || ownName; });
+      b.addEventListener('blur', function(){ if (colorwayNameEl) colorwayNameEl.textContent = specName || ownName; });
       colorwayDots.appendChild(b);
     }
     var ownName = OWN_COLORS[currentId] || 'Its own color';
@@ -9743,6 +9979,11 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
       '<span class="cfg-step-name">' + name + '</span><span class="cfg-step-pick"></span></div>';
   }
   function renderCfg(){
+    /* the Configure this car panel is gone from the card — the
+       pre-made colour sets live on the colour dots now (setSpec),
+       so there is no panel to build; anything that still calls
+       this lands here and stops */
+    if (!cfgPanel) return;
     var car = DB[currentId];
     var tpl = CFG[carFamily(currentId)];
     paintTiles = {}; lightBtns = []; stepPickEls = {};
@@ -9875,10 +10116,10 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
     sb.type = 'button'; sb.className = 'ghost-btn'; sb.textContent = 'Build sheet';
     sb.addEventListener('click', openCurrentSheet);
     acts.appendChild(sb);
-    if (CFG_URLS[currentId]){
+    if (factoryCfgUrl(currentId)){
       var fl = document.createElement('a');
       fl.className = 'ghost-btn'; fl.target = '_blank'; fl.rel = 'noopener';
-      fl.style.textDecoration = 'none'; fl.href = CFG_URLS[currentId];
+      fl.style.textDecoration = 'none'; fl.href = factoryCfgUrl(currentId);
       fl.textContent = 'Finish it at the factory \u2197';
       acts.appendChild(fl);
     }
@@ -9887,7 +10128,7 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
     /* sync the paint readouts with the colour set on the stage */
     syncPaintUI();
   }
-  cfgToggle.addEventListener('click', function(){
+  if (cfgToggle) cfgToggle.addEventListener('click', function(){
     var open = cfgPanel.classList.toggle('hide') === false;
     cfgToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     var sub = cfgToggle.querySelector('.cfg-toggle-sub');
@@ -9932,10 +10173,10 @@ function buildCard(slotLabel, optionIds, defId, compact, hooks){
     if (metaEl) metaEl.innerHTML = catOf(id) + ' · ' + typeOf(id) + ' <span class="meta-scope">· ' + scopeOf(id) + '</span>';
     noteEl.textContent = car.note;
     if (eggEl){ if (car.egg){ eggEl.hidden = false; eggEl.textContent = car.eggText || '\u2726 this one\u2019s for blessed gigger \u2726'; } else { eggEl.hidden = true; } }
-    if (CFG_URLS[id]){ cfgLink.href = CFG_URLS[id]; cfgLink.style.display = ''; }
+    if (factoryCfgUrl(id)){ cfgLink.href = factoryCfgUrl(id); cfgLink.style.display = ''; }
     else { cfgLink.removeAttribute('href'); cfgLink.style.display = 'none'; }
     if (car.soon){ badge.textContent = 'Coming soon'; badge.className = 'badge'; badge.style.display = ''; }
-    else if (car.own){ badge.textContent = 'Collection photo'; badge.className = 'badge'; badge.style.display = ''; }
+    else if (car.own){ badge.style.display = 'none'; }
     else { badge.style.display = 'none'; }
     specName = null;
     optPhoto = null;
@@ -10031,10 +10272,11 @@ function floorViewHook(entry){
     var need = (parseFloat(entry.el.style.top) || 0) + entry.el.offsetHeight + GAP;
     if (need > floorEl.clientHeight) floorEl.style.height = need + 'px';
     /* a height change on an arranged floor (a panel opening
-       inside the card) must not grow this card over the one
-       below it: outside theater the overlapped cards settle at
-       their closest free spots */
-    separateFloorCards();
+       inside the card) must never move THIS card: it stays
+       exactly where it is and every card it now reaches is
+       pushed down below it, cascading down the floor — the
+       expanding card never drops under the card below it */
+    pushDownFromCard(entry.el);
   };
 }
 
@@ -10334,6 +10576,49 @@ function resolveFloorOverlap(el){
 function separateFloorCards(){
   if (!floorSeparationActive()) return;
   floorCards.forEach(function(fc){ resolveFloorOverlap(fc.el); });
+  var need = 0;
+  floorCards.forEach(function(fc){
+    need = Math.max(need, (parseFloat(fc.el.style.top) || 0) + fc.el.offsetHeight + GAP);
+  });
+  if (need > floorEl.clientHeight) floorEl.style.height = need + 'px';
+}
+
+/* an expanding card — a panel opening inside it (Swap car,
+   Under the hood, More angles) — never moves and never tucks
+   under a neighbour: the card stays exactly where it is, and
+   every card it now overlaps is pushed straight down below it,
+   each pushed card in turn pushing down whatever it lands on,
+   until nothing overlaps. Cards settle top-first so the push
+   cascades down the floor; the expanding card itself is the
+   anchor and is never the one that moves. (The general
+   separateFloorCards pass above moves whichever card it visits
+   first to the closest free spot — for an expanding upper card
+   that spot can be BELOW the card underneath it, which is the
+   drop-under glitch this anchored pass exists to prevent.) */
+function pushDownFromCard(anchorEl){
+  if (!floorSeparationActive()) return;
+  var settled = [anchorEl];
+  var rest = [];
+  floorCards.forEach(function(fc){ if (fc.el !== anchorEl) rest.push(fc.el); });
+  rest.sort(function(p, q){ return (parseFloat(p.style.top) || 0) - (parseFloat(q.style.top) || 0); });
+  rest.forEach(function(el){
+    var r = floorRectOf(el);
+    if (r.w && r.h){
+      var y = r.t, guard = 0, moved = true;
+      while (moved && guard++ < 24){
+        moved = false;
+        for (var i = 0; i < settled.length; i++){
+          var s = floorRectOf(settled[i]);
+          if (floorRectsCollide({ l: r.l, t: y, w: r.w, h: r.h }, s)){
+            y = s.t + s.h + FLOOR_SEP;
+            moved = true;
+          }
+        }
+      }
+      if (y !== r.t) el.style.top = y + 'px';
+    }
+    settled.push(el);
+  });
   var need = 0;
   floorCards.forEach(function(fc){
     need = Math.max(need, (parseFloat(fc.el.style.top) || 0) + fc.el.offsetHeight + GAP);
@@ -10762,8 +11047,7 @@ function refreshBudget(){
   var note = document.getElementById('budgetNote');
   if (amt) amt.textContent = fmtMoney(total);
   if (note) note.textContent = priced + ' car' + (priced === 1 ? '' : 's') + ' on the floor' +
-    (free ? ', plus ' + free + ' priceless one-off' : '') +
-    ' — estimates: market level for the rare cars, MSRP / as-specced (kits included) for the current ones. The total follows every swap, add and remove.';
+    (free ? ', plus ' + free + ' priceless one-off' : '') + '.';
   refreshAfford(total);
 }
 
@@ -10888,8 +11172,7 @@ function refreshCompareMoney(){
   var note = document.getElementById('budgetNote');
   if (amt) amt.textContent = fmtMoney(total);
   if (note) note.textContent = priced + ' car' + (priced === 1 ? '' : 's') + ' in the comparison' +
-    (free ? ', plus ' + free + ' priceless one-off' : '') +
-    ' — estimates: market level for the rare cars, MSRP / as-specced (kits included) for the current ones. The total follows every swap, add and remove in the row.';
+    (free ? ', plus ' + free + ' priceless one-off' : '') + '.';
   refreshAfford(total);
 }
 function syncMoney(){
@@ -11287,18 +11570,30 @@ function syncTheaterDetailsBtn(card){
   gd.setAttribute('aria-pressed', only ? 'false' : 'true');
 }
 /* ================= FULLSCREEN \u2014 one card's photo, full screen ==
-   Between Replace and the round \u2715 on every floor card sits a
-   fullscreen icon. Tapping it opens an in-page overlay holding
+   After Replace and the round \u2715, in the far-right corner of
+   every floor card, sits a fullscreen icon. Tapping it opens an in-page overlay holding
    just the photo that card is currently showing, edge to edge on
    black with no card chrome at all; a tap anywhere on it, or Esc,
    closes it. (The native fullscreen API is blocked inside the app
    frame, so the overlay stands in for it.) It works the same on
    the regular floor, on image-only cards and in theater, because
    it only ever reads the card's current photo. */
-var cardFsOverlay = document.getElementById('cardFsOverlay');
-var cardFsImg = document.getElementById('cardFsImg');
+var cardFsOverlay = null;
+var cardFsImg = null;
+/* the overlay div sits after this script in the page, so grabbing
+   it at parse time finds nothing and every tap would silently do
+   nothing — resolve it lazily on first use instead, and bind its
+   tap-to-close at that same moment */
+function resolveCardFs(){
+  if (!cardFsOverlay){
+    cardFsOverlay = document.getElementById('cardFsOverlay');
+    cardFsImg = document.getElementById('cardFsImg');
+    if (cardFsOverlay) cardFsOverlay.addEventListener('click', function(){ closeCardFullscreen(); });
+  }
+  return !!(cardFsOverlay && cardFsImg);
+}
 function openCardFullscreen(cardEl){
-  if (!cardFsOverlay || !cardFsImg || !cardEl) return;
+  if (!cardEl || !resolveCardFs()) return;
   var src = (typeof cardPhotoSrc === 'function') ? cardPhotoSrc(cardEl) : '';
   if (!src){
     var onFrame = cardEl.querySelector('.stage .frame.on');
@@ -11315,7 +11610,6 @@ function openCardFullscreen(cardEl){
 function closeCardFullscreen(){
   if (cardFsOverlay) cardFsOverlay.hidden = true;
 }
-if (cardFsOverlay) cardFsOverlay.addEventListener('click', function(){ closeCardFullscreen(); });
 document.addEventListener('keydown', function(e){
   if (e.key === 'Escape' && cardFsOverlay && !cardFsOverlay.hidden) closeCardFullscreen();
 });
@@ -11342,6 +11636,10 @@ function attachTheaterDetails(entry){
     e.stopPropagation();
     var b = entry.el.querySelector('.details-btn');
     if (b) b.click();
+    /* same focus rule as the Image only button itself: a mouse
+       click hands focus back, so the card's color strip is not
+       held open by this pill's focus once the pointer leaves */
+    if (e.detail && dt.blur) dt.blur();
   });
   grip.appendChild(dt);
   syncTheaterDetailsBtn(entry.el);
@@ -11953,7 +12251,6 @@ var cmpSel = ['veneno','revuelto-1016','agera-one1','tecnica-st','p1-hdk','750s-
    and keep the same cars in view. Consumed and cleared on every render. */
 var _cmpRemovedHint = null;
 var cmpSheets = document.getElementById('cmpSheets');
-var cmpDragHint = document.getElementById('cmpDragHint');
 var cmpVerdict = document.getElementById('cmpVerdict');
 /* Drag the whole compare row sideways — the sheets stay in one
    horizontal line and never wrap under each other, so stats line
@@ -12386,7 +12683,6 @@ function renderCompare(){
     cmpSheets.focus({ preventScroll: true });
   }
   var filled = cmpSel.filter(function(id){ return !!id; });
-  if (cmpDragHint) cmpDragHint.style.display = filled.length > 1 ? '' : 'none';
   /* the fact rows, in the order they stack down each sheet: the hard
      numbers first, then — under their own divider — the /10 scores
      people actually care about. No Built row: how many were made no
@@ -12655,6 +12951,36 @@ function showView(which){
    (default $25) encoding the same link for a phone camera. Tapping
    a chip updates the selection and the QR; the panel closes on an
    outside click or Esc. */
+/* ================= TOOLBAR DOCK — Top · Left · Right =================
+   The toolbar floats as a bare group of buttons (no bar behind
+   it) and can dock three ways: sticky across the top, or pinned
+   to the left or right edge as a vertical stack. The choice is
+   kept in the same local store the room layout uses, so the dock
+   the visitor picks is the dock they get on the next visit. */
+(function(){
+  var bar = document.getElementById('toolbar');
+  if (!bar) return;
+  var KEY = 'trophy-room-dock-v1';
+  var btns = bar.querySelectorAll('.dock-seg button[data-dock]');
+  function applyDock(mode){
+    bar.classList.toggle('dock-left', mode === 'left');
+    bar.classList.toggle('dock-right', mode === 'right');
+    btns.forEach(function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-dock') === mode ? 'true' : 'false');
+    });
+  }
+  var saved = null;
+  try { saved = window.localStorage.getItem(KEY); } catch(e){}
+  applyDock(saved === 'left' || saved === 'right' ? saved : 'top');
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      var mode = b.getAttribute('data-dock');
+      applyDock(mode);
+      try { window.localStorage.setItem(KEY, mode); } catch(e){}
+    });
+  });
+})();
+/* ================= SUPPORT — amount chips + QR ================= */
 (function(){
   var wrap = document.getElementById('supportWrap');
   var btn = document.getElementById('btnSupport');
@@ -15557,14 +15883,26 @@ document.addEventListener('keydown', function(e){
       if (signOutBtn) signOutBtn.hidden = true;
     }
   }
-  /* Sign-in is redirect-based only, the way sites like Pinterest
-     do it: tapping Sign in with Google navigates this very page to
-     Google and back \u2014 no separate popup window ever opens, so
-     there is nothing for the app frame or a phone webview to block
-     or strand. And no failure is ever announced: if sign-in is
-     interrupted or refused for any reason, the button simply
-     resets and the room stays exactly as it was, unsigned, with no
-     message anywhere \u2014 the visitor just taps Sign in again. */
+  /* Sign-in tries the popup flow first and falls back to the
+     redirect flow. The redirect-only version died on Firebase's
+     own handler page with \u201cThe requested action is invalid\u201d
+     before Google's account chooser ever opened: the redirect
+     flow parks its pending request in this page's session
+     storage, and the handler on the auth domain has to match it
+     when the browser comes back \u2014 wherever that storage is
+     partitioned or blocked (an in-app webview, Safari, third-
+     party storage turned off) the handler finds nothing to
+     match and refuses the request outright. The popup flow
+     keeps the whole handshake inside a window on the auth
+     domain itself and posts the result back, so it never
+     depends on that storage handoff; only when a popup is
+     refused outright \u2014 blocked, or unsupported inside an
+     embedded frame \u2014 does the redirect run, exactly as
+     before. And no failure is ever announced either way: if
+     sign-in is interrupted or refused for any reason, the
+     button simply resets and the room stays exactly as it was,
+     unsigned, with no message anywhere \u2014 the visitor just
+     taps Sign in again. */
   var signInBusy = false;
   function setSignInBusy(busy){
     signInBusy = busy;
@@ -15573,13 +15911,34 @@ document.addEventListener('keydown', function(e){
       signInBtn.textContent = busy ? 'Signing in\u2026' : 'Sign in with Google';
     }
   }
-  function startRedirectSignIn(provider){
-    try {
-      auth.signInWithRedirect(provider).catch(function(){
+  function startSignIn(provider){
+    var fellBack = false;
+    function fallbackToRedirect(){
+      if (fellBack) return;
+      fellBack = true;
+      try {
+        auth.signInWithRedirect(provider).catch(function(){
+          setSignInBusy(false);
+        });
+      } catch(e){
         setSignInBusy(false);
+      }
+    }
+    try {
+      auth.signInWithPopup(provider).then(function(){
+        setSignInBusy(false);
+      }).catch(function(err){
+        var code = err && err.code ? err.code : '';
+        if (code === 'auth/popup-blocked' ||
+            code === 'auth/cancelled-popup-request' ||
+            code === 'auth/operation-not-supported-in-this-environment'){
+          fallbackToRedirect();
+        } else {
+          setSignInBusy(false);
+        }
       });
     } catch(e){
-      setSignInBusy(false);
+      fallbackToRedirect();
     }
   }
   if (signInBtn) signInBtn.addEventListener('click', function(){
@@ -15587,7 +15946,7 @@ document.addEventListener('keydown', function(e){
     if (!fbReady || !auth) return;
     var provider = new firebase.auth.GoogleAuthProvider();
     setSignInBusy(true);
-    startRedirectSignIn(provider);
+    startSignIn(provider);
   });
   /* complete a redirect sign-in on return \u2014 silently, either way */
   if (fbReady && auth && auth.getRedirectResult){
