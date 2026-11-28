@@ -73,19 +73,22 @@
     display:flex;flex-wrap:wrap;gap:12px;align-items:center;
     /* a floating group of buttons — no bar behind them at all.
        The toolbar itself is fully transparent (no background, no
-       borders, no shadow), so the pills float straight over the
-       page and there is no backdrop to seam or glitch against the
-       photos scrolling underneath. Each control carries its own
-       --panel fill (the .seg always did; the sign-in and Support
-       pills get the same fill below), so the group reads as one
-       set of buttons wherever it docks. In the default top dock
-       the group stays sticky, with a small positive inset: the
-       whole group, padding included, sits inside the viewport
-       once it sticks, so no pill is ever cropped by the top edge
-       the way the old flush black bar cropped them. z-index 200
-       lifts it over the floor and garage cards while staying
-       under the modal overlays (300+), the shape bar (850) and
-       the theater (4000). */
+       borders, no shadow). Each control carries its own --panel
+       fill (the .seg always did; the sign-in and Support pills
+       get the same fill below), so the group reads as one set of
+       buttons wherever it docks. In the default top dock the
+       group is sticky: it sits in the normal flow at the top of
+       the page, then sticks 10px from the viewport top and
+       travels with the reader as the page scrolls under it, so
+       the view switch, sign-in, Support and dock controls stay
+       in reach. Because the toolbar itself is transparent and
+       only the pills carry a fill, the stuck group reads as
+       floating buttons over the content passing beneath, not a
+       bar. z-index 200 keeps its own dropdowns (the Support
+       panel) above the cards below it while staying under the
+       modal overlays (300+), the shape bar (850) and the
+       theater (4000). The side docks below override this with
+       position:fixed, so Left/Right behaviour is unchanged. */
     position:sticky;top:10px;z-index:200;background:transparent;
     margin:26px 0 6px;padding:6px 0;
   }
@@ -121,6 +124,20 @@
     .toolbar.dock-left{left:8px}
     .toolbar.dock-right{right:8px}
     .toolbar.dock-left .seg button,.toolbar.dock-right .seg button{padding:8px 10px}
+  }
+  /* a side dock pushes the page aside instead of covering it:
+     while the toolbar is pinned to an edge, the body takes
+     padding on that side equal to the toolbar's footprint
+     (its width + its edge offset + a breathing gap), so the
+     value bar and the edge cards shift clear of the dock
+     rather than sliding underneath it. The dock classes are
+     toggled on <body> by the dock switch (applyDock below). */
+  body{transition:padding-left .35s var(--ease),padding-right .35s var(--ease)}
+  body.dock-push-left{padding-left:196px}
+  body.dock-push-right{padding-right:196px}
+  @media (max-width:620px){
+    body.dock-push-left{padding-left:152px}
+    body.dock-push-right{padding-right:152px}
   }
   .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px}
   .seg button{
@@ -2396,7 +2413,7 @@ var DB = {
   'tecnica':       { name:'Huracán Tecnica', note:'The sweet spot of the Huracán range — STO power at 631 hp, rear-drive, nose lift kept.', img:'assets/000/img-096.jpg', start:0,
                      frames:['assets/000/img-097.jpg','assets/000/img-098.jpg','assets/000/img-099.jpg','assets/000/img-096.jpg','assets/000/img-100.jpg','assets/000/img-101.jpg','assets/000/img-102.jpg','assets/000/img-103.jpg','assets/000/img-104.jpg'],
                      angles:['Front ¾','Front ¾','Front','Rear ¾','Rear ¾','Rear ¾','Rear ¾','Rear','Side'] },
-  'huracan-sto':   { name:'Huracán STO', note:'631 hp, rear-drive — the race car Lamborghini made road legal, with more downforce than the Performante. Lead: the Viola Pasifae car, one car in one Quantum Cars studio shoot, complete turn. Viola Pasifae, matte olive-grey, Rosso Efesto and matte black are complete one-car turns (olive-grey likely the same car as the lead photo, unproven). Nero Nemesis with bronze wheels and Verde Hydra are complete on angles but mix cars. Blu Eleos matt is 3/5, one car. The two AI recolors are pixel-level repaints of the Viola photos, labelled AI. Blu Laufey / Arancio is the original Blu Cepheus press car.', img:'assets/000/img-105.jpg', start:0,
+  'huracan-sto':   { name:'Huracán STO', note:'631 hp, rear-drive — the race car Lamborghini made road legal, with more downforce than the Performante.', img:'assets/000/img-105.jpg', start:0,
  frames:['assets/000/img-105.jpg','assets/000/img-106.jpg','assets/000/img-107.jpg','assets/000/img-108.jpg','assets/000/img-109.jpg','assets/000/img-110.jpg'],
  angles:['Front ¾','Front','Front ¾','Side','Rear ¾','Rear'] },
   'huracan-nowing':{ name:'Huracán EVO', note:'The wingless Huracán — no fixed rear wing, just the clean ducktail deck, with a 631 hp V10 and all-wheel drive.', img:'assets/000/img-111.jpg', start:0,
@@ -11118,9 +11135,7 @@ function refreshAfford(total){
       'at ' + tier.label.toLowerCase() + (affordScope === 'compare' ? ', this line-up is no more than ' : ', the room is no more than ') + Math.round(tier.nwShare * 1000) / 10 +
       '% of net worth, and its running costs — estimated at 6% of value a year (' + fmtMoney(affordTotal * AFFORD_RUN_RATE) +
       ' a year for insurance, maintenance, storage and consumables) — take no more than ' + Math.round(tier.incShare * 1000) / 10 +
-      '% of income, ' + tier.tail + (affordScope === 'compare'
-        ? ' Swap, add or remove a car in the comparison and every figure moves with the new total.'
-        : ' Swap, add or remove a car on the floor and every figure moves with the new total.')));
+      '% of income, ' + tier.tail));
   }
   var tierSeg = document.getElementById('affordTierSeg');
   if (tierSeg) tierSeg.querySelectorAll('button').forEach(function(b, i){ b.setAttribute('aria-pressed', i === affordTier ? 'true' : 'false'); });
@@ -12964,8 +12979,11 @@ function showView(which){
    outside click or Esc. */
 /* ================= TOOLBAR DOCK — Top · Left · Right =================
    The toolbar floats as a bare group of buttons (no bar behind
-   it) and can dock three ways: sticky across the top, or pinned
-   to the left or right edge as a vertical stack. The choice is
+   it) and can dock three ways: across the top, where it is
+   sticky and travels with the reader as the page scrolls, or
+   pinned to the left or right edge as a vertical stack — in
+   which case the page is padded aside so the dock never covers
+   content. The choice is
    kept in the same local store the room layout uses, so the dock
    the visitor picks is the dock they get on the next visit. */
 (function(){
@@ -12976,6 +12994,11 @@ function showView(which){
   function applyDock(mode){
     bar.classList.toggle('dock-left', mode === 'left');
     bar.classList.toggle('dock-right', mode === 'right');
+    /* a side dock pushes the page content aside (see the
+       body.dock-push-* rules in the stylesheet) so the pinned
+       toolbar never covers the value bar or an edge card */
+    document.body.classList.toggle('dock-push-left', mode === 'left');
+    document.body.classList.toggle('dock-push-right', mode === 'right');
     btns.forEach(function(b){
       b.setAttribute('aria-pressed', b.getAttribute('data-dock') === mode ? 'true' : 'false');
     });
